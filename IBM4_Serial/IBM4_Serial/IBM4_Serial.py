@@ -150,7 +150,7 @@ def VISA_Attempt_1():
         print(ERR_STATEMENT)
         print(e)
 
-def VISA_Attempt_2():
+def VISA_Attempt_2(voltage):
     # Attempt to talk to ItsyBitsy M4 via VISA 
     # R. Sheehan 30 - 11 - 2020
 
@@ -174,25 +174,45 @@ def VISA_Attempt_2():
             #instr.write_termination = '\n'
             time.sleep(DELAY)
             print(instr)
+
+            cmd_str = "o%(v1)0.2f"%{"v1":voltage}
+            instr.write(cmd_str)
+            time.sleep(DELAY)
+            count = 0
+            count_lim = 10
+            while count < count_lim:
+                instr.write("l")
+                time.sleep(DELAY)
+                print(count,",",instr.read())
+                count = count + 1
             
             # trying to simulate what the actual terminal looks like
-            buf_list = []
-            count = 0
-            run_loop = True
-            while run_loop:
-                print("Enter a command: ")
-                cmd_str = input()
-                if cmd_str == 'exit':
-                    run_loop = False
-                elif cmd_str.startswith("l"):
-                    instr.write(cmd_str)
-                    time.sleep(DELAY) 
-                    data = instr.read()
-                    buf_list.append(data)
-                    print(count,",",data)
-                else:
-                    instr.write(cmd_str)
-                    time.sleep(DELAY) 
+            #buf_list = []
+            #count = 0
+            #run_loop = True
+            #while run_loop:
+            #    print("Enter a command: ")
+            #    cmd_str = input()
+            #    if cmd_str == 'exit':
+            #        run_loop = False
+            #    elif cmd_str.startswith("l"):
+            #        instr.write(cmd_str)
+            #        time.sleep(DELAY) 
+            #        data = instr.read()
+            #        buf_list.append(data)
+            #        print(count,",",data)
+            #    else:
+            #        instr.write(cmd_str)
+            #        time.sleep(DELAY) 
+
+            # One way to make this work will be to proceed as follows
+            # 1 open comms
+            # 2 write voltage
+            # 3 perform multiple reads
+            # 4 save buffer data
+            # 5 close comms
+            # 6 process data
+            # goto 1
 
             print("Closing instrument")
 
@@ -202,8 +222,8 @@ def VISA_Attempt_2():
             # close the device
             instr.close()
 
-            for i in range(0, len(buf_list), 1):
-                print(i,",",buf_list[i])
+            #for i in range(0, len(buf_list), 1):
+            #    print(i,",",buf_list[i])
 
         else:
             ERR_STATEMENT = ERR_STATEMENT + "\nNo devices connected"; 
@@ -224,6 +244,10 @@ if __name__ == '__main__':
 
     #Serial_Attempt()
 
-    VISA_Attempt_2()
+    VISA_Attempt_2(1.0)
+
+    VISA_Attempt_2(2.0)
+
+    VISA_Attempt_2(3.0)
 
     
