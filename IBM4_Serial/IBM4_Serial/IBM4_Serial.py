@@ -21,7 +21,7 @@ HOME = False
 USER = 'Robert' if HOME else 'robertsheehan/OneDrive - University College Cork/Documents'
 
 def Serial_Attempt():
-    # Attempting to commubnicate with the ItsyBitsy M4 via Serial comms
+    # Attempting to communicate with the ItsyBitsy M4 via Serial comms
     # It isn't really working, but it seems to work fine with the Arduino Micro
     # Going to try VISA comms instead
     # R. Sheehan 30 - 11 - 2020
@@ -33,7 +33,7 @@ def Serial_Attempt():
         DELAY = 1 # timed delay in units of seconds
 
         #DEVICE = 'COM14' # Address / Port of the device that you want to communicate with, check device manager
-        DEVICE = 'COM4' # Address / Port of the device that you want to communicate with, check device manager
+        DEVICE = 'COM6' # Address / Port of the device that you want to communicate with, check device manager
         
         timeout = DELAY # finite timeout requried for reading
         
@@ -65,10 +65,10 @@ def Serial_Attempt():
             # However, it does work with the Arduino Micro
             # R. Sheehan 30 - 11 - 2020
 
-            ser.write(b"b2.0") # write a command to the device
+            ser.write(b"a0.5") # write a command to the device
             time.sleep(DELAY)
 
-            ser.write(b"a3.0") # write a command to the device
+            ser.write(b"a1.5") # write a command to the device
             time.sleep(DELAY)
 
             ser.write(b"l") # write a command to the device
@@ -107,7 +107,8 @@ def VISA_Attempt_1():
             print(rm.list_resources())
 
             # Create an instance of the instrument at a particular address
-            instr = rm.open_resource(rm.list_resources()[0], open_timeout = TIMEOUT)
+            #instr = rm.open_resource(rm.list_resources()[0], open_timeout = TIMEOUT)
+            instr = rm.open_resource('COM6')
             #instr.read_termination = '\n'
             #instr.write_termination = '\n'
             time.sleep(DELAY)
@@ -118,7 +119,7 @@ def VISA_Attempt_1():
             volt = 1.0            
             while volt < volt_lim:
                 # Write a command to that instrument
-                cmd_str = "o%(v1)0.2f"%{"v1":volt}
+                cmd_str = "a%(v1)0.2f"%{"v1":volt}
                 print(cmd_str)                 
                 
                 instr.write(cmd_str)
@@ -139,7 +140,10 @@ def VISA_Attempt_1():
             print("Closing instrument")
 
             # clear the buffers on the device
-            #instr.clear() # not sure if this is configured for the IBM4 so leave it out for now
+            volt = 0
+            cmd_str = "a%(v1)0.2f"%{"v1":volt}
+            instr.write(cmd_str)
+            instr.clear() # not sure if this is configured for the IBM4 so leave it out for now
 
             # close the device
             instr.close()
@@ -244,10 +248,10 @@ if __name__ == '__main__':
 
     #Serial_Attempt()
 
-    VISA_Attempt_2(1.0)
+    VISA_Attempt_1()
 
-    VISA_Attempt_2(2.0)
+    #VISA_Attempt_2(2.0)
 
-    VISA_Attempt_2(3.0)
+    #VISA_Attempt_2(3.0)
 
     
