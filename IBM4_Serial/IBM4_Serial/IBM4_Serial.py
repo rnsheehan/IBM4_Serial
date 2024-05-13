@@ -179,7 +179,7 @@ def VISA_Attempt_2(voltage):
             time.sleep(DELAY)
             print(instr)
 
-            cmd_str = "o%(v1)0.2f"%{"v1":voltage}
+            cmd_str = "a%(v1)0.2f"%{"v1":voltage}
             instr.write(cmd_str)
             time.sleep(DELAY)
             count = 0
@@ -248,10 +248,12 @@ if __name__ == '__main__':
 
     #Serial_Attempt()
 
-    VISA_Attempt_1()
+    #VISA_Attempt_1()
 
-    #VISA_Attempt_2(2.0)
+    VISA_Attempt_2(2.0)
 
-    #VISA_Attempt_2(3.0)
+    VISA_Attempt_2(3.0)
+
+    VISA_Attempt_2(0.0)
 
     
