@@ -26,6 +26,9 @@ def Serial_Attempt():
     # Going to try VISA comms instead
     # R. Sheehan 30 - 11 - 2020
 
+    # Online documentation
+    # https://pyserial.readthedocs.io/en/latest/shortintro.html 
+
     FUNC_NAME = ".Serial_Attempt()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
@@ -93,6 +96,9 @@ def Serial_Attempt():
 def VISA_Attempt_1():
     # Attempt to talk to ItsyBitsy M4 via VISA 
     # R. Sheehan 30 - 11 - 2020
+
+    # online documentation: 
+    # https://pyvisa.readthedocs.io/en/latest/
     
     FUNC_NAME = ".VISA_Attempt()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
