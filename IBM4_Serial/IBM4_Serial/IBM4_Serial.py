@@ -118,6 +118,9 @@ def VISA_Attempt_1():
     # online documentation: 
     # https://pyvisa.readthedocs.io/en/latest/
     # https://pyvisa.readthedocs.io/en/1.8/api/index.html
+
+    # the documentation is not great
+    # some functions being used here have no documentation at all
     
     FUNC_NAME = ".VISA_Attempt()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
@@ -141,16 +144,25 @@ def VISA_Attempt_1():
 
             if instr:
                 print(instr)
+                #print(instr.read_stb()) # doesn't work with IBM4
+                #print(instr.read_termination)
+
+                #pyvisa.log_to_screen()
 
                 # zero both output channels
+                instr.clear()
                 instr.write('a0')
                 instr.write('b0')
 
                 #print(instr.buffer_read()) # does not work with IBM4
-                print(instr.read_raw())
-                print(instr.read_raw())
+                #print(instr.read_raw(100))
+                #print(instr.read_raw())
+
+                # would like a way to step through all the lines in the device buffer
+                #while True:
+                #    print(instr.read_bytes(1))
             
-                RUN_SWEEP = False
+                RUN_SWEEP = True
                 if RUN_SWEEP:
                     count_lim = 5        
                     volt_lim = 2.6
