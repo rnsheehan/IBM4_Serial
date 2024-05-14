@@ -108,7 +108,7 @@ def VISA_Attempt_1():
 
             # Create an instance of the instrument at a particular address
             #instr = rm.open_resource(rm.list_resources()[0], open_timeout = TIMEOUT)
-            instr = rm.open_resource('COM6')
+            instr = rm.open_resource('COM37')
             #instr.read_termination = '\n'
             #instr.write_termination = '\n'
             time.sleep(DELAY)
@@ -236,6 +236,21 @@ def VISA_Attempt_2(voltage):
         print(ERR_STATEMENT)
         print(e)
 
+def Linear_Sweep(addr, src_chn, read_chn, v_strt, v_end, n_steps):
+    
+    # Enable the microcontroller to perform a linear sweep of measurements
+    # start at v_strt, set voltage, read inputs, format inputs, increment_voltage, plot results
+    # addr is the address of the device performing the measurement
+    # src_chn is the channel being used as a voltage source
+    # read_chn is the list of channel being used to read the voltages from the circuit
+    # v_strt is the initial voltage
+    # v_end is the final voltage
+    # n_steps is the number of voltage steps
+    # caveat emptor n_steps is constrained by fact that smallest voltage increment is 0.1V
+    # R. Sheehan 14 - 5 - 2024
+
+    pass
+
 def main():
     pass
 
@@ -248,12 +263,12 @@ if __name__ == '__main__':
 
     #Serial_Attempt()
 
-    #VISA_Attempt_1()
+    VISA_Attempt_1()
 
-    VISA_Attempt_2(2.0)
+    #VISA_Attempt_2(2.0)
 
-    VISA_Attempt_2(3.0)
+    #VISA_Attempt_2(3.0)
 
-    VISA_Attempt_2(0.0)
+    #VISA_Attempt_2(0.0)
 
     
