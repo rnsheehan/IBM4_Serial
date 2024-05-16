@@ -133,11 +133,14 @@ def VISA_Attempt_1():
             # Make a list of the devices attached to the PC
             print("The following devices are connected: ")
             print(rm.list_resources())
+            print('')
 
             # Create an instance of the instrument at a particular address
-            #instr = rm.open_resource(rm.list_resources()[0], open_timeout = TIMEOUT)
-            DEVICE = 'COM37'
-            instr = rm.open_resource(DEVICE)
+            #instr = rm.open_resource(rm.list_resources()[1], open_timeout = TIMEOUT)
+            
+            DEVICE = 'COM189'
+            instr = rm.open_resource(DEVICE, open_timeout = TIMEOUT)
+
             #instr.read_termination = '\n'
             #instr.write_termination = '\n'
             time.sleep(DELAY)
@@ -151,12 +154,18 @@ def VISA_Attempt_1():
 
                 # zero both output channels
                 instr.clear()
+                
                 instr.write('a0')
                 instr.write('b0')
+                instr.query('*IDN') # query doesn't work with IBM4 the way you think it should
+                #instr.write('*IDN') # Must do a write, followed by two reads in order to see the response of the device
 
                 #print(instr.buffer_read()) # does not work with IBM4
-                #print(instr.read_raw(100))
-                #print(instr.read_raw())
+                print(instr.read_raw())
+                print(instr.read_raw())
+                print(instr.read_raw())
+
+                instr.clear()
 
                 # would like a way to step through all the lines in the device buffer
                 #while True:
@@ -164,7 +173,7 @@ def VISA_Attempt_1():
             
                 RUN_SWEEP = True
                 if RUN_SWEEP:
-                    count_lim = 5        
+                    count_lim = 5       
                     volt_lim = 2.6
                     volt = 1.0            
                     while volt < volt_lim:
@@ -192,7 +201,7 @@ def VISA_Attempt_1():
                             #print(count, ",", instr.query('l') ) # this has the same effect as instr.read(), stick with instr.read() to be less ambiguous
                             #print(count, ",", instr.query('l') ) # this has the same effect as instr.read(), stick with instr.read() to be less ambiguous
 
-                            #print(count, instr.query('l'))
+                            #print(count, instr.read('l'))
                             #print(count, instr.query_ascii_values('l')) # this has the advantage of returning a list of numerical values
                     
                             instr.query('l') # make the call to skip the line containing the command but don't bother printing it

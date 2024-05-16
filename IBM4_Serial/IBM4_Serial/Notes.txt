@@ -1,0 +1,17 @@
+14 - 5 - 2024
+Got the IBM4 working with an earlier version of Code.py and 
+an earlier version of the UF2 file
+
+16 - 5 - 2024
+Updated the IBM4 with Frank's Code.py
+Updated the UF2 file (version 8.2.6)
+Can get comms via LabVIEW and PuTTY but can't get correct comms via MSVS
+Suspect that the problem is the UF2 file
+Code is throwing errors when attempting to call instr.clear() which was previously working
+Try an earlier version of UF2 (version 7.3.3)
+Earlier version of UF2 file fixes the problem
+Instr.clear now works as expected
+
+When switching between operating via MSVS and operating via LabVIEW the LabVIEW will throw 
+"Can't Find Device" Error. This is spurious, and can be reset by opening LabVIEW comms in debug mode.
+I don't know what the cause is. 
