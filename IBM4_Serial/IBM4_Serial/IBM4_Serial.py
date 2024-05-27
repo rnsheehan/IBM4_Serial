@@ -12,6 +12,11 @@ import os
 # https://pyserial.readthedocs.io/en/latest/pyserial_api.html
 # R. Sheehan 30 - 11 - 2020
 
+# Notes on do-while equivalent in Python
+# https://stackoverflow.com/questions/743164/how-to-emulate-a-do-while-loop
+# Also take a look at your MATLAB code for Thorlabs CLD1015
+# R. Sheehan 27 - 5 - 2024
+
 import serial # import the pySerial module pip install pyserial
 import pyvisa
 import time
