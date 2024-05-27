@@ -17,6 +17,8 @@ import pyvisa
 import time
 import numpy
 
+import IBM4_Library
+
 MOD_NAME_STR = "IBM4_Serial"
 HOME = False
 USER = 'Robert' if HOME else 'robertsheehan/OneDrive - University College Cork/Documents'
@@ -138,7 +140,7 @@ def VISA_Attempt_1():
             # Create an instance of the instrument at a particular address
             #instr = rm.open_resource(rm.list_resources()[1], open_timeout = TIMEOUT)
             
-            DEVICE = 'COM189'
+            DEVICE = 'COM3'
             instr = rm.open_resource(DEVICE, open_timeout = TIMEOUT)
 
             #instr.read_termination = '\n'
@@ -171,7 +173,7 @@ def VISA_Attempt_1():
                 #while True:
                 #    print(instr.read_bytes(1))
             
-                RUN_SWEEP = True
+                RUN_SWEEP = False
                 if RUN_SWEEP:
                     count_lim = 5       
                     volt_lim = 2.6
@@ -350,12 +352,30 @@ if __name__ == '__main__':
 
     #Serial_Attempt()
 
-    VISA_Attempt_1()
+    #VISA_Attempt_1()
 
     #VISA_Attempt_2(2.0)
 
     #VISA_Attempt_2(3.0)
 
     #VISA_Attempt_2(0.0)
+    
+    the_instr = IBM4_Library.Find()
+    
+    dev_addr = 'COM3'
+
+    #the_instr = IBM4_Library.Open_Comms(dev_addr)
+    
+    IBM4_Library.Write_Single_Chnnl(the_instr, 'A1', 1.5)
+    
+    IBM4_Library.Read_Single_Chnnl(the_instr, 'A2', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A3', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A4', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A5', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'D2', 10)
+    
+    #IBM4_Library.Read_All_Chnnl(the_instr, 20)
+
+    IBM4_Library.Close_Comms(the_instr)
 
     
