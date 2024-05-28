@@ -49,6 +49,16 @@ def Find():
             TIMEOUT = 1000 * 60 # timeout, seemingly has to be in milliseconds
             for x in rm.list_resources():
                 instr = rm.open_resource(x, open_timeout=TIMEOUT)
+                
+                # Some issues around opening the resource that need to be addressed
+                # LabVIEW and PUTTY work no problem, 
+                # Issue with the VISA setup of the device. 
+                # What's going on? 
+                # R. Sheehan 28 - 5 - 2024
+                # Do you need to open and close it as a serial device first, then open it as a VISA resource? 
+                
+                #instr.read_termination = '\n'
+                #instr.write_termination = '\n'
                 time.sleep(DELAY)
                 if instr is not None:
                     instr.query('*IDN')
@@ -86,6 +96,8 @@ def Open_Comms(dev_addr):
             TIMEOUT = 1000 * 60 # timeout, seemingly has to be in milliseconds
             
             instr = rm.open_resource(dev_addr, open_timeout = TIMEOUT) # opens comms
+            #instr.read_termination = '\n'
+            #instr.write_termination = '\n'
             
             time.sleep(DELAY)
             
@@ -169,6 +181,10 @@ def Read_Single_Chnnl(instrument_obj, input_channel, no_averages):
         
         if c10:
             read_cmd = 'Average%(v1)d:%(v2)d\n'%{"v1":Read_Chnnls[input_channel], "v2":no_averages}
+            #read_cmd = 'Average%(v1)d:%(v2)d'%{"v1":Read_Chnnls[input_channel], "v2":no_averages}
+            #print(instrument_obj.query(read_cmd))
+            #time.sleep(1)
+            #print(instrument_obj.read())
             instrument_obj.query(read_cmd) # send the read command to the device
             read_result = instrument_obj.read() # read the result of the read command
             vals = re.findall(r'[-+]?\d+[\.]?\d*', read_result) # parse the numeric values of read_result into a list            
@@ -176,6 +192,7 @@ def Read_Single_Chnnl(instrument_obj, input_channel, no_averages):
             print(vals) # print the parsed values
             instrument_obj.clear() # clear the IBM4 buffer after each read
             return float(vals[1]) # return the relevant numerical value
+            #return 0.0
         else:
             if not c1:
                 ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'

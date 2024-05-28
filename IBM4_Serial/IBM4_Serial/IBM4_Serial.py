@@ -35,6 +35,9 @@ def Serial_Attempt():
     # However, writing commands to the IBM4 has no effect other than printing the command on the device buffer
     # Stick with VISA
     # R. Sheehan 14 - 5 - 2024
+    
+    # This may be because you're not configuring the serial open correctly
+    # R. Sheehan 28 - 5 - 2024
 
     # Attempting to communicate with the ItsyBitsy M4 via Serial comms
     # It isn't really working, but it seems to work fine with the Arduino Micro
@@ -52,23 +55,23 @@ def Serial_Attempt():
         DELAY = 1 # timed delay in units of seconds
 
         #DEVICE = 'COM14' # Address / Port of the device that you want to communicate with, check device manager
-        DEVICE = 'COM37' # Address / Port of the device that you want to communicate with, check device manager
+        DEVICE = 'COM3' # Address / Port of the device that you want to communicate with, check device manager
         
-        #timeout = DELAY # finite timeout requried for reading
-        #baudrate = 9600 # All these defaults are fine, 
-        #bytesize = serial.EIGHTBITS
-        #parity = serial.PARITY_NONE
-        #stopbits = serial.STOPBITS_ONE 
-        #xonxoff = False
-        #rtscts = False
-        #write_timeout = DELAY
-        #dsrdtr = False
-        #inter_byte_timeout = DELAY
-        #exclusive = None
+        timeout = DELAY # finite timeout requried for reading
+        baudrate = 9600 # All these defaults are fine, 
+        bytesize = serial.EIGHTBITS
+        parity = serial.PARITY_NONE
+        stopbits = serial.STOPBITS_ONE 
+        xonxoff = False
+        rtscts = False
+        write_timeout = DELAY
+        dsrdtr = False
+        inter_byte_timeout = DELAY
+        exclusive = None
 
-        #ser = serial.Serial(DEVICE, baudrate, bytesize, parity, stopbits, timeout, xonxoff, rtscts, write_timeout, dsrdtr, inter_byte_timeout, exclusive) # open a serial port
+        ser = serial.Serial(DEVICE, baudrate, bytesize, parity, stopbits, timeout, xonxoff, rtscts, write_timeout, dsrdtr, inter_byte_timeout, exclusive) # open a serial port
         
-        ser = serial.Serial()
+        #ser = serial.Serial()
         ser.port = DEVICE
         ser.open()
 
@@ -154,20 +157,23 @@ def VISA_Attempt_1():
 
             if instr:
                 print(instr)
+                
                 #print(instr.read_stb()) # doesn't work with IBM4
                 #print(instr.read_termination)
-
                 #pyvisa.log_to_screen()
 
                 # zero both output channels
                 instr.clear()
                 
                 instr.write('a0')
-                instr.write('b0')
+                instr.write('b1.5')
                 instr.query('*IDN') # query doesn't work with IBM4 the way you think it should
+                instr.query('Average0:10')
+                #instr.query('l')
                 #instr.write('*IDN') # Must do a write, followed by two reads in order to see the response of the device
 
                 #print(instr.buffer_read()) # does not work with IBM4
+                print(instr.read_raw())
                 print(instr.read_raw())
                 print(instr.read_raw())
                 print(instr.read_raw())
@@ -345,6 +351,35 @@ def Linear_Sweep(addr, src_chn, read_chn, v_strt, v_end, n_steps):
 
     pass
 
+def IBM4_Lib_Hacking():
+    
+    # Testing the IBM4 library
+    # R. Sheehan 27 - 5 - 2024
+    
+    # Some issues around opening the resource that need to be addressed
+    # Comms works no problem when first opened with LabVIEW open.vi
+    # Issue with the VISA setup of the device. 
+    # What's going on? 
+    # R. Sheehan 28 - 5 - 2024
+    # Do you need to open and close it as a serial device first, then open it as a VISA resource?
+    
+    the_instr = IBM4_Library.Find()
+    
+    #dev_addr = 'COM3'
+    #the_instr = IBM4_Library.Open_Comms(dev_addr)
+    
+    IBM4_Library.Write_Single_Chnnl(the_instr, 'A1', 1.5)
+    
+    IBM4_Library.Read_Single_Chnnl(the_instr, 'A2', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A3', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A4', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A5', 10)
+    # IBM4_Library.Read_Single_Chnnl(the_instr, 'D2', 10)
+    
+    IBM4_Library.Read_All_Chnnl(the_instr, 20)
+
+    IBM4_Library.Close_Comms(the_instr)
+
 def main():
     pass
 
@@ -365,22 +400,4 @@ if __name__ == '__main__':
 
     #VISA_Attempt_2(0.0)
     
-    the_instr = IBM4_Library.Find()
-    
-    dev_addr = 'COM3'
-
-    #the_instr = IBM4_Library.Open_Comms(dev_addr)
-    
-    IBM4_Library.Write_Single_Chnnl(the_instr, 'A1', 1.5)
-    
-    IBM4_Library.Read_Single_Chnnl(the_instr, 'A2', 10)
-    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A3', 10)
-    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A4', 10)
-    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A5', 10)
-    # IBM4_Library.Read_Single_Chnnl(the_instr, 'D2', 10)
-    
-    #IBM4_Library.Read_All_Chnnl(the_instr, 20)
-
-    IBM4_Library.Close_Comms(the_instr)
-
-    
+    IBM4_Lib_Hacking()
