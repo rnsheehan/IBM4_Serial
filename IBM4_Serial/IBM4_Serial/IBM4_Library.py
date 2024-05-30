@@ -354,10 +354,10 @@ def Linear_Sweep(instrument_obj, output_channel, v_strt, v_end, no_steps, no_ave
                 step_data = numpy.append(step_data, chnnl_values) # store the  measured voltage values from all channels for this step
                 # store the  set-voltage and the measured voltage values from all channels for this step
                 # use append on the first step to initialise the voltage_data array
-                # use vstack on subsequent steps
+                # use vstack on subsequent steps to build up the 2D array of data
                 voltage_data = numpy.append(voltage_data, step_data) if count == 0 else numpy.vstack([voltage_data, step_data])
                 v_set = v_set + delta_v # increment the set-voltage
-                count = count + 1
+                count = count + 1 if count == 0 else count # only need to increment count once to build up the array
             print('Sweep complete')
             return voltage_data
         else:
