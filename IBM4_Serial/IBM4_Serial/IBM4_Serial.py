@@ -120,6 +120,39 @@ def Serial_Attempt():
     except Exception as e: 
         print(ERR_STATEMENT)
         print(e)
+        
+def FHP_Serial():
+    
+    # Examination of pyserial by FHP
+    # 30 - 5 - 2024
+
+    # Configure the serial port (example configuration)
+    port = 'COM4' 
+    baud_rate = 9600  # Set the baud rate
+    
+    try:
+        # Open the serial port
+        #ser = serial.Serial(port, baud_rate, timeout=3, stopbits=serial.STOPBITS_ONE)
+        ser = serial.Serial(port, baud_rate, timeout = 0, write_timeout = 0.5, stopbits=serial.STOPBITS_ONE) # solves the timeout issue
+        
+        # Check if the serial port is open
+        if ser.is_open:
+            print(f"Serial port {port} opened successfully.")
+        else:
+            print(f"Failed to open serial port {port}.") 
+
+        # Example: Write data to the serial port
+        num = ser.write(b'*IDN\r\n')
+        print(f"Bytes written: {num}:")
+ 
+
+       # Example: Read data from the serial port
+        response = " "
+        response = ser.readline()
+        print(f"Received: {response}")
+        
+    except Exception as e: 
+        print(e)
 
 def VISA_Attempt_1():
     # Attempt to talk to ItsyBitsy M4 via VISA 
@@ -336,21 +369,6 @@ def VISA_Attempt_2(voltage):
         print(ERR_STATEMENT)
         print(e)
 
-def Linear_Sweep(addr, src_chn, read_chn, v_strt, v_end, n_steps):
-    
-    # Enable the microcontroller to perform a linear sweep of measurements
-    # start at v_strt, set voltage, read inputs, format inputs, increment_voltage, plot results
-    # addr is the address of the device performing the measurement
-    # src_chn is the channel being used as a voltage source
-    # read_chn is the list of channel being used to read the voltages from the circuit
-    # v_strt is the initial voltage
-    # v_end is the final voltage
-    # n_steps is the number of voltage steps
-    # caveat emptor n_steps is constrained by fact that smallest voltage increment is 0.1V
-    # R. Sheehan 14 - 5 - 2024
-
-    pass
-
 def IBM4_Lib_Hacking():
     
     # Testing the IBM4 library
@@ -370,7 +388,7 @@ def IBM4_Lib_Hacking():
     
     IBM4_Library.Write_Single_Chnnl(the_instr, 'A1', 1.5)
     
-    IBM4_Library.Read_Single_Chnnl(the_instr, 'A2', 10)
+    #IBM4_Library.Read_Single_Chnnl(the_instr, 'A2', 10)
     # IBM4_Library.Read_Single_Chnnl(the_instr, 'A3', 10)
     # IBM4_Library.Read_Single_Chnnl(the_instr, 'A4', 10)
     # IBM4_Library.Read_Single_Chnnl(the_instr, 'A5', 10)
@@ -378,6 +396,36 @@ def IBM4_Lib_Hacking():
     
     IBM4_Library.Read_All_Chnnl(the_instr, 20)
 
+    IBM4_Library.Close_Comms(the_instr)
+    
+def Sweep_Test():
+    
+    # Test the linear voltage sweep
+    # R. Sheehan 30 - 5 - 2024
+    
+    the_instr = IBM4_Library.Find()
+
+    v_start = 0.0
+    v_end = 3.0
+    n_steps = 5
+    n_avg = 5
+    the_data = IBM4_Library.Linear_Sweep(the_instr, 'A1', v_start, v_end, n_steps, n_avg)
+    
+    for i in range(0, len(the_data), 1):
+        print(the_data[i])
+    print("")
+        
+    # An example of how to process the data for the diode measurement
+    print('Sample Processing for Diode Measurement')
+    print('Vset: ',the_data[:,0]) # v-set
+    print('Vset A2-Gnd', the_data[:,1]-the_data[:,3]) # v-set-measured by A2
+    print('Vsense A2-A3: ', (the_data[:,1]-the_data[:,2])) # v-sense A2 - A3
+    print('Isense A2-A3/Rsense: ', (the_data[:,1]-the_data[:,2])/(10.0/1000.0)) # I-sense A2 - A3 / Rsense
+    print('Vdiode A3-Gnd: ', the_data[:,2]-the_data[:,3]) # v-diode A3
+    print('Gnd A4: ', the_data[:,3]) # v-low gnd at A4
+    print('Gnd A5: ', the_data[:,4]) # v-low gnd at A5
+    print('Gnd D2: ', the_data[:,5]) # v-low gnd at D2
+    
     IBM4_Library.Close_Comms(the_instr)
 
 def main():
@@ -400,4 +448,6 @@ if __name__ == '__main__':
 
     #VISA_Attempt_2(0.0)
     
-    IBM4_Lib_Hacking()
+    #IBM4_Lib_Hacking()
+    
+    Sweep_Test()

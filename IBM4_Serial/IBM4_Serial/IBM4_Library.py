@@ -29,6 +29,8 @@ COMMS = False
 # and observing its effect on the DUT
 DELAY = 1 # delay value in units of seconds
 
+VMAX = 3.4 # Strict upper bound for Analog output voltage
+
 def Find():
     
     # This method searches for the first available IBM4 and then opens it.
@@ -146,7 +148,7 @@ def Close_Comms(instrument_obj):
         print(ERR_STATEMENT)
         print(e)
 
-def Read_Single_Chnnl(instrument_obj, input_channel, no_averages):
+def Read_Single_Chnnl(instrument_obj, input_channel, no_averages, loud = False):
     
     # This method interfaces with the IBM4 to perform a read operation on a single read channel
     # The input channel must be between 0 and 3, And the number of readings should be greater than zero. 
@@ -187,12 +189,12 @@ def Read_Single_Chnnl(instrument_obj, input_channel, no_averages):
             #print(instrument_obj.read())
             instrument_obj.query(read_cmd) # send the read command to the device
             read_result = instrument_obj.read() # read the result of the read command
-            vals = re.findall(r'[-+]?\d+[\.]?\d*', read_result) # parse the numeric values of read_result into a list            
-            #print(read_result)                        
-            print(vals) # print the parsed values
+            vals = re.findall(r'[-+]?\d+[\.]?\d*', read_result) # parse the numeric values of read_result into a list                                 
+            if loud: 
+                print(read_result)
+                print(vals) # print the parsed values
             instrument_obj.clear() # clear the IBM4 buffer after each read
             return float(vals[1]) # return the relevant numerical value
-            #return 0.0
         else:
             if not c1:
                 ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
@@ -205,11 +207,13 @@ def Read_Single_Chnnl(instrument_obj, input_channel, no_averages):
         print(ERR_STATEMENT)
         print(e)
 
-def Read_All_Chnnl(instrument_obj, no_averages):
+def Read_All_Chnnl(instrument_obj, no_averages, loud = False):
     
     # This method interfaces with the IBM4 to perform an averaging read operation on all read channels
+    # returns a list of voltage readings at each analog input channel [A2, A3, A4, A5, D2]
 
     # instrument_obj is the open visa resource connected to dev_addr
+    # no_averages is the number of averages to perform on each voltage reading
 
     FUNC_NAME = ".Read_All_Chnnl()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
@@ -221,11 +225,12 @@ def Read_All_Chnnl(instrument_obj, no_averages):
         c10 = c1 and c3 # if all conditions are true then write can proceed
         
         if c10:
-            read_vals = [] # list for storing the values at each analog input
+            read_vals = numpy.array([]) # instantiate an empty numpy array
             for item in Read_Chnnls:
-                value = Read_Single_Chnnl(instrument_obj, item, no_averages)
-                read_vals.append(value)
-            print('Voltages at AI: ',read_vals)
+                value = Read_Single_Chnnl(instrument_obj, item, no_averages, loud)
+                read_vals = numpy.append(read_vals, value)
+                if loud: print('Voltages at AI: ',read_vals)
+            return read_vals
         else:
             if not c1:
                 ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
@@ -267,7 +272,7 @@ def Write_Single_Chnnl(instrument_obj, output_channel, set_voltage = 0.0):
     try:
         c1 = True if instrument_obj is not None else False # confirm that the intstrument object has been instantiated
         c2 = True if output_channel in Write_Chnnls else False # confirm that the output channel label is correct
-        c3 = True if set_voltage >= 0.0 and set_voltage < 3.3 else False # confirm that the set voltage value is in range
+        c3 = True if set_voltage >= 0.0 and set_voltage < VMAX else False # confirm that the set voltage value is in range
         c10 = c1 and c2 and c3 # if all conditions are true then write can proceed
         
         if c10:
@@ -298,6 +303,75 @@ def PWM():
 
     try:
         pass
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+        
+def Linear_Sweep(instrument_obj, output_channel, v_strt, v_end, no_steps, no_averages, loud = False):
+    
+    # Enable the microcontroller to perform a linear sweep of measurements using a single channel
+    # start at v_strt, set voltage, read inputs, increment_voltage, return voltage readings at all inputs
+    # format the voltage readings after the fact
+    
+    # instrument_obj is the device performing the measurement
+    # output_channel is the channel being used as a voltage source
+    # v_strt is the initial voltage
+    # v_end is the final voltage
+    # no_steps is the number of voltage steps
+    # caveat emptor no_steps is constrained by fact that smallest voltage increment is 0.1V
+    # R. Sheehan 30 - 5 - 2024
+
+    FUNC_NAME = ".Linear_Sweep()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        delta_v_min = 0.1 # smallest reliable voltage increment for IBM4 is 10mV
+        
+        c1 = True if instrument_obj is not None else False # confirm that the intstrument object has been instantiated
+        c2 = True if output_channel in Write_Chnnls else False # confirm that the output channel label is correct             
+        c3 = True if v_strt >= 0.0 and v_strt < v_end else False # confirm that the voltage sweep bounds are in range
+        c4 = True if v_end > v_strt and v_end < VMAX else False # confirm that the voltage sweep bounds are in range
+        c5 = True if (v_end - v_strt) > delta_v_min else False # confirm that the voltage sweep bounds are in range
+        c6 = True if no_steps > 2 else False # confirm that the no. of steps is appropriate
+        c7 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
+        c10 = c1 and c2 and c3 and c4 and c5 and c6 and c7
+        
+        if c10:
+            # Proceed with the single channel linear voltage sweep
+            voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
+            delta_v = max( (v_end - v_strt) / float(no_steps - 1), delta_v_min) # Determine the sweep voltage increment, this is bounded below by delta_v_min
+            v_set = v_strt # initialise the set-voltage
+            # perform the sweep
+            print('Sweeping voltage on Analog Output: ',output_channel)
+            count = 0
+            while v_set < v_end:
+                step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
+                Write_Single_Chnnl(instrument_obj, output_channel, v_set) # set the voltage at the analog output channel
+                time.sleep(0.25*DELAY) # Apply a fixed delay
+                chnnl_values = Read_All_Chnnl(instrument_obj, no_averages, loud) # read the averaged voltages at all analog input channels
+                # save the data
+                step_data = numpy.append(step_data, v_set) # store the set-voltage value for this step
+                step_data = numpy.append(step_data, chnnl_values) # store the  measured voltage values from all channels for this step
+                # store the  set-voltage and the measured voltage values from all channels for this step
+                # use append on the first step to initialise the voltage_data array
+                # use vstack on subsequent steps
+                voltage_data = numpy.append(voltage_data, step_data) if count == 0 else numpy.vstack([voltage_data, step_data])
+                v_set = v_set + delta_v # increment the set-voltage
+                count = count + 1
+            print('Sweep complete')
+            return voltage_data
+        else:
+            if not c1:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
+            if not c2:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\noutput_channel outside range {A0, A1}'
+            if not c3 or not c4 or not c5:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\nvoltage sweep bounds not appropriate for range [0.0, 3.3)'
+            if not c6:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\nn_steps not defined correctly'
+            if not c7:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\nn_averages not defined correctly'
+            raise Exception        
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
