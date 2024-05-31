@@ -375,3 +375,69 @@ def Linear_Sweep(instrument_obj, output_channel, v_strt, v_end, no_steps, no_ave
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
+
+def Multimeter_Mode():
+    
+    # Method for interfacing to the IBM4 and using it as a digitial multimeter
+    # Output voltage from the Analog outs, Read voltage from the Analog inputs
+    # Switch the PWM output On / Off as required
+    # Perform differential measurements
+    # It will be assumed that comms to the device is open
+    # R. Sheehan 31 - 5 - 2024
+
+    FUNC_NAME = ".Multimeter_Mode()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        # Simple menu allows you to operate the CLD1015 continuously
+        # Define options for menu
+        start = 'Options for IBM4 Multimeter Mode:\n';
+        option1 = 'Identify Device = 1\n'; # Query *IDN
+        option2 = 'Set Analog Output A0 = 2\n'; # Set voltage at A0
+        option3 = 'Set Analog Output A1 = 3\n'; # Set voltage at A1
+        option4 = 'Set PWM = 4\n'; # Set PWM 
+        option5 = 'Re-Set Analog Outputs = 5\n'; # Gnd all outputs
+        option6 = 'Read All Analog Inputs = 6\n'; # Read voltages at each of the Analog inputs
+        option7 = 'Perform Differential Measurement = 7\n'; # Perform differential voltage measurement
+        option8 = 'End program Input = -1\n';
+        message = 'Input: ';
+        newline = '\n';
+        prompt = newline + start + option1 + option2 + option3 + option4 + option5 + option6 + option7 + option8 + message + newline
+        
+        # Start do-while loop to process the multimeter options
+        #action = -1
+        #action = int(input('Input Value'))
+        #print('action = ',action)
+        do = True
+        
+        while do: 
+            action = int(input('Input Value: '))
+            if action == -1:
+                print('End Program\n')
+                do = False
+            elif action == 1:
+                print('Device Name\n')
+                continue
+            elif action == 2:
+                print('Set Analog Output A0\n')
+                continue
+            elif action == 3:
+                print('Set Analog Output A1\n')
+                continue
+            elif action == 4:
+                print('Set PWM Output\n')
+                continue
+            elif action == 5:
+                print('Re-Set Analog Outputs\n')
+                continue
+            elif action == 6:
+                print('Read All Analog Inputs\n')
+                continue
+            elif action == 7:
+                print('Perform Differential Measurement\n')
+                continue
+            else:
+                action = int(input('Input Value: '))
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)

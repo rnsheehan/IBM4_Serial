@@ -427,6 +427,16 @@ def Sweep_Test():
     print('Gnd D2: ', the_data[:,5]) # v-low gnd at D2
     
     IBM4_Library.Close_Comms(the_instr)
+    
+def Multimeter_Test():
+    # Test the multimeter mode option
+    # R. Sheehan 31 - 5 - 2024
+    
+    #the_instr = IBM4_Library.Find()
+    
+    IBM4_Library.Multimeter_Mode()
+
+    #IBM4_Library.Close_Comms(the_instr)
 
 def main():
     pass
@@ -450,4 +460,6 @@ if __name__ == '__main__':
     
     #IBM4_Lib_Hacking()
     
-    Sweep_Test()
+    #Sweep_Test()
+    
+    Multimeter_Test()
