@@ -58,6 +58,8 @@ def Find():
                 # What's going on? 
                 # R. Sheehan 28 - 5 - 2024
                 # Do you need to open and close it as a serial device first, then open it as a VISA resource? 
+                # FHP has apparently solved this problem
+                # 4 - 6 - 2024
                 
                 #instr.read_termination = '\n'
                 #instr.write_termination = '\n'
@@ -69,6 +71,8 @@ def Find():
                         print('Opened comms:',instr.resource_name)
                         return instr # return the instr object so that it can be referenced elsewhere
                         break
+                else:
+                    continue
         else:
             ERR_STATEMENT = ERR_STATEMENT + '\nCannot find any IBM4 attached to PC'
             raise Exception
@@ -104,13 +108,17 @@ def Open_Comms(dev_addr):
             time.sleep(DELAY)
             
             if instr is not None:
-                print('Opened comms:',dev_addr)
-                
-                instr.write('a0') # zero both outputs before proceeding
-                instr.write('b0')
-                instr.clear() # clear the IBM4 buffer
-                
-                return instr # return the instr object so that it can be referenced elsewhere
+                instr.query('*IDN')
+                str_val = instr.read()
+                if "ISBY" in str_val:
+                    print('Opened comms:',instr.resource_name)
+                    instr.write('a0') # zero both outputs before proceeding
+                    instr.write('b0')
+                    instr.clear() # clear the IBM4 buffer
+                    return instr # return the instr object so that it can be referenced elsewhere
+                else:
+                    ERR_STATEMENT = ERR_STATEMENT + '\nDevice: ' + dev_addr + ' is not correctly configured'
+                    raise Exception
             else:
                 ERR_STATEMENT = ERR_STATEMENT + '\nCould not open comms to: ' + dev_addr
                 raise Exception
@@ -207,7 +215,7 @@ def Read_Single_Chnnl(instrument_obj, input_channel, no_averages, loud = False):
         print(ERR_STATEMENT)
         print(e)
 
-def Read_All_Chnnl(instrument_obj, no_averages, loud = False):
+def Read_All_Chnnl(instrument_obj, no_averages = 10, loud = False):
     
     # This method interfaces with the IBM4 to perform an averaging read operation on all read channels
     # returns a list of voltage readings at each analog input channel [A2, A3, A4, A5, D2]
@@ -241,18 +249,54 @@ def Read_All_Chnnl(instrument_obj, no_averages, loud = False):
         print(ERR_STATEMENT)
         print(e)
 
-def Diff_Read():
+def Diff_Read(instrument_obj, pos_channel, neg_channel, no_averages, loud = False):
 
     # This VI interfaces with the IBM4 to perform a differential read operation.
     # The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
     # At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
     # larger than 10000. The output will be a single Voltage (floating point) value representing the average of the multiple readings.
+    
+    # instrument_obj is the open visa resource connected to dev_addr
+    # pos_channel is one of A2, A3, A4, A5, D2
+    # neg_channel is one of A2, A3, A4, A5, D2, accepting that it is not the same as pos_channel    
+    # no_averages is the num. of readings that are to be averaged
 
     FUNC_NAME = ".Diff_Read()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
     
     try:
-        pass
+        c1 = True if instrument_obj is not None else False # confirm that the intstrument object has been instantiated
+        c2 = True if pos_channel in Read_Chnnls else False # confirm that the positive channel label is correct
+        c3 = True if neg_channel in Read_Chnnls else False # confirm that the positive channel label is correct
+        c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
+        c5 = True if no_averages > 2 and no_averages < 104 else False # confirm that no. averages being taken is a sensible value
+        
+        c10 = c1 and c2 and c3 and c4 and c5 # if all conditions are true then write can proceed
+        if c10:
+            read_cmd = 'Diff_Read%(v1)d:%(v2)d:%(v3)d\n'%{"v1":Read_Chnnls[pos_channel], "v2":Read_Chnnls[neg_channel], "v3":no_averages}
+            instrument_obj.query(read_cmd) # send the read command to the device
+            read_result = instrument_obj.read() # read the result of the read command
+            vals_str = re.findall(r'[-+]?\d+[\.]?\d*', read_result) # parse the numeric values of read_result into a list of strings
+            #vals_flt = [float(x) for x in vals_str] # convert the list of strings to floats, save as a list
+            vals_flt = numpy.float_(vals_str) # convert the list of strings to floats using numpy, save as numpy array (better)
+            if loud: 
+                print(read_result)
+                print(vals_flt) # print the parsed values
+            instrument_obj.clear() # clear the IBM4 buffer after each read            
+            vals_mean = numpy.mean(vals_flt) # compute the average of all the diff_reads
+            vals_delta = 0.5*( numpy.max(vals_flt) - numpy.min(vals_flt) ) # compute the range of the diff_read
+            return [vals_mean, vals_delta, vals_flt] # return the relevant numerical values
+        else:
+            if not c1:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+            if not c2:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+            if not c3:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+            if not c4:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
+            if not c5:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 103]'
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
@@ -292,17 +336,35 @@ def Write_Single_Chnnl(instrument_obj, output_channel, set_voltage = 0.0):
         print(ERR_STATEMENT)
         print(e)
 
-def PWM():
+def Write_PWM(instrument_obj, percentage):
     
     # This method interfaces with the IBM4 to set a pulse wave modulated (PWM) output signal.
     # The output Pin# must be: 5,7,9,10-13.
     # The PWM output must be between 0 and 100, and is a floating point value.
+    
+    # instrument_obj is the open visa resource connected to dev_addr
+    # percentage must be in the range [0.0, 100]
 
     FUNC_NAME = ".PWM()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
-        pass
+        c1 = True if instrument_obj is not None else False # confirm that the intstrument object has been instantiated
+        c3 = True if percentage >= 0 and percentage < 101 else False # confirm that no. averages being taken is a sensible value
+        
+        c10 = c1 and c3 # if all conditions are true then write can proceed
+        if c10:
+            output_channel = 9 # when using the IBM4 enhancement board the PWM is fixed to D9
+            write_cmd = 'PWM%(v1)d:%(v2)d'%{"v1":output_channel, "v2":percentage}
+            instrument_obj.write(write_cmd)
+            time.sleep(DELAY)
+            instrument_obj.clear()
+        else:
+            if not c1:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
+            if not c3:
+                ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\npercentage outside range [0, 100]'
+            raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
@@ -325,7 +387,7 @@ def Linear_Sweep(instrument_obj, output_channel, v_strt, v_end, no_steps, no_ave
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
-        delta_v_min = 0.1 # smallest reliable voltage increment for IBM4 is 10mV
+        delta_v_min = 0.01 # smallest reliable voltage increment for IBM4 is 10mV
         
         c1 = True if instrument_obj is not None else False # confirm that the intstrument object has been instantiated
         c2 = True if output_channel in Write_Chnnls else False # confirm that the output channel label is correct             
@@ -376,7 +438,7 @@ def Linear_Sweep(instrument_obj, output_channel, v_strt, v_end, no_steps, no_ave
         print(ERR_STATEMENT)
         print(e)
 
-def Multimeter_Mode():
+def Multimeter_Mode(instrument_obj):
     
     # Method for interfacing to the IBM4 and using it as a digitial multimeter
     # Output voltage from the Analog outs, Read voltage from the Analog inputs
@@ -389,55 +451,109 @@ def Multimeter_Mode():
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
-        # Simple menu allows you to operate the CLD1015 continuously
-        # Define options for menu
-        start = 'Options for IBM4 Multimeter Mode:\n';
-        option1 = 'Identify Device = 1\n'; # Query *IDN
-        option2 = 'Set Analog Output A0 = 2\n'; # Set voltage at A0
-        option3 = 'Set Analog Output A1 = 3\n'; # Set voltage at A1
-        option4 = 'Set PWM = 4\n'; # Set PWM 
-        option5 = 'Re-Set Analog Outputs = 5\n'; # Gnd all outputs
-        option6 = 'Read All Analog Inputs = 6\n'; # Read voltages at each of the Analog inputs
-        option7 = 'Perform Differential Measurement = 7\n'; # Perform differential voltage measurement
-        option8 = 'End program Input = -1\n';
-        message = 'Input: ';
-        newline = '\n';
-        prompt = newline + start + option1 + option2 + option3 + option4 + option5 + option6 + option7 + option8 + message + newline
-        
-        # Start do-while loop to process the multimeter options
-        #action = -1
-        #action = int(input('Input Value'))
-        #print('action = ',action)
-        do = True
-        
-        while do: 
-            action = int(input('Input Value: '))
-            if action == -1:
-                print('End Program\n')
-                do = False
-            elif action == 1:
-                print('Device Name\n')
-                continue
-            elif action == 2:
-                print('Set Analog Output A0\n')
-                continue
-            elif action == 3:
-                print('Set Analog Output A1\n')
-                continue
-            elif action == 4:
-                print('Set PWM Output\n')
-                continue
-            elif action == 5:
-                print('Re-Set Analog Outputs\n')
-                continue
-            elif action == 6:
-                print('Read All Analog Inputs\n')
-                continue
-            elif action == 7:
-                print('Perform Differential Measurement\n')
-                continue
-            else:
-                action = int(input('Input Value: '))
+        if instrument_obj is not None:
+            # Simple menu allows you to operate the IBM4 continuously
+            
+            # Start do-while loop to process the multimeter options
+            do = True        
+            while do: 
+                action = int( input( multimeter_prompt() ) )
+                if action == -1:
+                    print('\nEnd Program\n')
+                    do = False
+                elif action == 1:
+                    idn_prompt(instrument_obj)
+                    continue
+                elif action == 2:
+                    volt_output_prompt(instrument_obj, 'A0')
+                    continue
+                elif action == 3:
+                    volt_output_prompt(instrument_obj, 'A1')
+                    continue
+                elif action == 4:
+                    pwm_output_prompt(instrument_obj)
+                    continue
+                elif action == 5:
+                    zero_IBM4(instrument_obj)
+                    continue
+                elif action == 6:
+                    read_inputs_prompt(instrument_obj)
+                    continue
+                elif action == 7:
+                    diff_read_prompt(instrument_obj)
+                    continue
+                else:
+                    #action = int(input(prompt)) # don't make this call here, otherwise prompt for input is executed twice
+                    continue
+        else:
+            ERR_STATEMENT = ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
+            raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
+        
+def multimeter_prompt():
+    # text processing for the multimeter mode prompt
+    
+    # Define options for menu
+    start = 'Options for IBM4 Multimeter Mode:\n';
+    option1 = 'Identify Device = 1\n'; # Query *IDN
+    option2 = 'Set Analog Output A0 = 2\n'; # Set voltage at A0
+    option3 = 'Set Analog Output A1 = 3\n'; # Set voltage at A1
+    option4 = 'Set PWM = 4\n'; # Set PWM 
+    option5 = 'Re-Set Analog Outputs = 5\n'; # Gnd all outputs
+    option6 = 'Read All Analog Inputs = 6\n'; # Read voltages at each of the Analog inputs
+    option7 = 'Perform Differential Measurement = 7\n'; # Perform differential voltage measurement
+    option8 = 'End program Input = -1\n';
+    message = 'Input: ';
+    newline = '\n';
+    prompt = newline + start + option1 + option2 + option3 + option4 + option5 + option6 + option7 + option8 + message
+    
+    return prompt
+
+def idn_prompt(instrument_obj):
+    # perform the *IDN action
+    # R. Sheehan 4 - 6-  2024    
+    instrument_obj.query('*IDN')
+    str_val = instrument_obj.read()
+    if "ISBY" in str_val:
+        print('\nCurrent Device:',instrument_obj.resource_name)
+    instrument_obj.clear()
+
+def volt_output_prompt(instrument_obj, output_channel):
+    # Method for requesting the user input a voltage value to output from some channel
+    # R. Sheehan 4 - 6 - 2024
+
+    print('\nSet Analog Output %(v1)s'%{"v1":output_channel})
+    axvolt = float(input('Enter a voltage value: '))
+    Write_Single_Chnnl(instrument_obj, output_channel,axvolt)
+    
+def zero_IBM4(instrument_obj):
+    # zero both analog output channels
+    # R. Sheehan 4 - 6-  2024
+    print('\nRe-Set Analog Outputs\n')
+    Write_Single_Chnnl(instrument_obj, 'A0', 0.0)
+    Write_Single_Chnnl(instrument_obj, 'A1', 0.0)
+    
+def read_inputs_prompt(instrument_obj):
+    
+    print('\nRead All Analog Inputs')
+    ch_vals = Read_All_Chnnl(instrument_obj, 10)
+    print('AI voltages: ',ch_vals)
+    
+def pwm_output_prompt(instrument_obj):
+    # Method for getting the IBM4 to output PWM signal
+    # R. Sheehan 4 - 6 - 2024
+
+    print('\nSet PWM Output')
+    pwmval = int( input( 'Enter PWM percentage: ' ) )
+    Write_PWM(instrument_obj, pwmval)
+    
+def diff_read_prompt(instrument_obj):
+    
+    print('\nPerform Differential Measurement')
+    pos_chn = str( input('Enter pos-chan: ') )
+    neg_chn = str( input('Enter neg-chan: ') )
+    n_ave = int( input('Enter no. averages: ') )
+    diff_res = Diff_Read(instrument_obj, pos_chn, neg_chn, n_ave)
+    print('Differential Read Value = %(v1)0.3f +/- %(v2)0.3f'%{"v1":diff_res[0], "v2":diff_res[1]})

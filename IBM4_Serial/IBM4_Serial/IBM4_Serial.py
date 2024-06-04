@@ -381,20 +381,22 @@ def IBM4_Lib_Hacking():
     # R. Sheehan 28 - 5 - 2024
     # Do you need to open and close it as a serial device first, then open it as a VISA resource?
     
-    the_instr = IBM4_Library.Find()
+    #the_instr = IBM4_Library.Find()
     
-    #dev_addr = 'COM3'
-    #the_instr = IBM4_Library.Open_Comms(dev_addr)
+    dev_addr = 'COM3'
+    the_instr = IBM4_Library.Open_Comms(dev_addr)
     
     IBM4_Library.Write_Single_Chnnl(the_instr, 'A1', 1.5)
     
-    #IBM4_Library.Read_Single_Chnnl(the_instr, 'A2', 10)
-    # IBM4_Library.Read_Single_Chnnl(the_instr, 'A3', 10)
+    #IBM4_Library.Read_Single_Chnnl(the_instr, 'A2', 10, True)
+    #IBM4_Library.Read_Single_Chnnl(the_instr, 'A3', 10, True)
+    diff_res = IBM4_Library.Diff_Read(the_instr, 'A2', 'A3', 10, True)
+    print('diff-read = %(v1)0.3f +/- %(v2)0.3f'%{"v1":diff_res[0], "v2":diff_res[1]})
     # IBM4_Library.Read_Single_Chnnl(the_instr, 'A4', 10)
     # IBM4_Library.Read_Single_Chnnl(the_instr, 'A5', 10)
     # IBM4_Library.Read_Single_Chnnl(the_instr, 'D2', 10)
     
-    IBM4_Library.Read_All_Chnnl(the_instr, 20)
+    #IBM4_Library.Read_All_Chnnl(the_instr, 20)
 
     IBM4_Library.Close_Comms(the_instr)
     
@@ -433,10 +435,11 @@ def Multimeter_Test():
     # R. Sheehan 31 - 5 - 2024
     
     #the_instr = IBM4_Library.Find()
+    the_instr = IBM4_Library.Open_Comms('COM3')
     
-    IBM4_Library.Multimeter_Mode()
+    IBM4_Library.Multimeter_Mode(the_instr)
 
-    #IBM4_Library.Close_Comms(the_instr)
+    IBM4_Library.Close_Comms(the_instr)
 
 def main():
     pass
