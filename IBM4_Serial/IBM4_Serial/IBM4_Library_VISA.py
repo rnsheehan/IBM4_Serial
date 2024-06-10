@@ -15,7 +15,7 @@ import time
 import numpy
 import re
 
-MOD_NAME_STR = "IBM4_library"
+MOD_NAME_STR = "IBM4_library_VISA"
 
 # Dictionaries for the Read, Write Channels
 Read_Chnnls = {"A2":0, "A3":1, "A4":2, "A5":3, "D2":4}
