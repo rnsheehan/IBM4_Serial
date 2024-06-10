@@ -1,6 +1,3 @@
-import sys
-import os 
-
 # add path to our file
 #sys.path.append('c:/Users/Robert/Programming/Python/Common/')
 #sys.path.append('c:/Users/Robert/Programming/Python/Plotting/')
@@ -17,6 +14,9 @@ import os
 # Also take a look at your MATLAB code for Thorlabs CLD1015
 # R. Sheehan 27 - 5 - 2024
 
+import os
+import sys
+import glob
 import serial # import the pySerial module pip install pyserial
 import pyvisa
 import time
@@ -127,31 +127,150 @@ def FHP_Serial():
     # 30 - 5 - 2024
 
     # Configure the serial port (example configuration)
-    port = 'COM4' 
+    port = 'COM3' 
     baud_rate = 9600  # Set the baud rate
     
     try:
         # Open the serial port
         #ser = serial.Serial(port, baud_rate, timeout=3, stopbits=serial.STOPBITS_ONE)
-        ser = serial.Serial(port, baud_rate, timeout = 0, write_timeout = 0.5, stopbits=serial.STOPBITS_ONE) # solves the timeout issue
+        ser = serial.Serial(port, baud_rate, timeout = 10, write_timeout = 0.5, stopbits=serial.STOPBITS_ONE) # solves the timeout issue
         
         # Check if the serial port is open
         if ser.is_open:
             print(f"Serial port {port} opened successfully.")
+            
+            # Example 1: Write data to the serial port
+            RUN_EX1 = False
+            if RUN_EX1:
+                num = ser.write(b'*IDN\r\n')
+                print(f"Bytes written: {num}:")
+            
+                num = ser.out_waiting
+                print(f"Bytes available: {num}:")
+        
+                # Example: Read data from the serial port
+                response = " "
+                response = ser.read(100)
+                print(f"Received: {response}")
+            
+            # Example 2: Read Data from the serial port
+            RUN_EX2 = True
+            if RUN_EX2:
+                num = ser.write(b'Mode0\r\n')
+                print(f"Bytes written: {num}:")
+                num = ser.write(b'Read1:100\r\n')
+                print(f"Bytes written: {num}:")
+            
+                num = ser.out_waiting
+                print(f"Bytes available: {num}:")
+        
+                response = " "
+                response = ser.read_until('\n',size=None)
+                print(f"Received: {response}")
+                
+            print('Closing serial port')
+            ser.close() # close the serial port
         else:
             print(f"Failed to open serial port {port}.") 
-
-        # Example: Write data to the serial port
-        num = ser.write(b'*IDN\r\n')
-        print(f"Bytes written: {num}:")
- 
-
-       # Example: Read data from the serial port
-        response = " "
-        response = ser.readline()
-        print(f"Received: {response}")
-        
     except Exception as e: 
+        print(e)
+        
+def FindIBM4():
+    # Goes through all listed serial ports looking for an IBM4
+    # Once a port is found, return the port name
+    # FHP 30 - 5 - 2024
+    
+    FUNC_NAME = ".FindIBM4()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+    
+    try:
+        if sys.platform.startswith('win'):
+            ports = ['COM%s'%(i+1) for i in range(256)]
+        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+            # this excludes your current terminal "/dev/tty"
+            ports = glob.glob('/dev/tty[A-Za-z]*')
+        elif sys.platform.startswith('darwin'):
+            ports = glob.glob('/dev/tty.*')
+        else:
+            ERR_STATEMENT = ERR_STATEMENT + '\nUnsupported platform'
+            raise EnvironmentError('Unsupported platform')
+        
+        baud_rate = 9600
+
+        for port in ports:
+            try:
+                print('Trying: ',port)
+                s = serial.Serial(port, baud_rate, timeout = 0.05, write_timeout = 0.1, inter_byte_timeout = 0.1, stopbits=serial.STOPBITS_ONE)
+                s.write(b'*IDN\r\n')
+                response = s.read_until('\n',size=None)
+                Code=response.rsplit(b'\r\n')
+                if len(Code) > 2:
+                    if Code[1]==b'ISBY-UCC-RevA.1':
+                        print(f'IBM4 found at {port}')
+                        IBM4Port = port
+                        s.close()
+                        break # stop the search for an IBM4 at the first one you find   
+            except(OSError, serial.SerialException):
+                # Ignore the errors that arise from non-IBM4 serial ports
+                pass
+        
+        return IBM4Port
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+        
+def FHP_Serial_2():
+    
+    # Another example using FindIBM4
+
+    FUNC_NAME = ".FindIBM4()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+    
+    try:
+        baud_rate = 9600
+        port = FindIBM4()
+        ser = serial.Serial(port, baud_rate, timeout = 3, write_timeout = 0.1, inter_byte_timeout = 0.1, stopbits = serial.STOPBITS_ONE)
+        
+        # Check if the serial port is open
+        if ser.is_open:
+            print(f"Serial port {port} opened successfully.")
+            
+            # Example 1: Write data to the serial port
+            RUN_EX1 = False
+            if RUN_EX1:
+                num = ser.write(b'*IDN\r\n')
+                print(f"Bytes written: {num}:")
+            
+                num = ser.out_waiting
+                print(f"Bytes available: {num}:")
+        
+                # Example: Read data from the serial port
+                response = " "
+                response = ser.read(100)
+                print(f"Received: {response}")
+            
+            # Example 2: Read Data from the serial port
+            RUN_EX2 = True
+            if RUN_EX2:
+                num = ser.write(b'Mode0\r\n')
+                print(f"Bytes written: {num}:")
+                num = ser.write(b'Read1:100\r\n')
+                print(f"Bytes written: {num}:")
+            
+                num = ser.out_waiting
+                print(f"Bytes available: {num}:")
+        
+                response = " "
+                response = ser.read_until('\n',size=None)
+                print(f"Received: {response}")
+            
+            print(f'Serial port: ' + port + ' is closed')
+            ser.close()
+        else:
+            ERR_STATEMENT = ERR_STATEMENT = '\nFailed to open serial port: ' + port
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
         print(e)
 
 def VISA_Attempt_1():
@@ -465,4 +584,8 @@ if __name__ == '__main__':
     
     #Sweep_Test()
     
-    Multimeter_Test()
+    #Multimeter_Test()
+    
+    FHP_Serial_2()
+    
+    #FindIBM4()

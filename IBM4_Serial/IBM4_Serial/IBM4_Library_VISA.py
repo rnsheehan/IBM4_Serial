@@ -1,6 +1,6 @@
 """
-Python library for interacting with the IBM4
-Assumes that the IBM4 is configured with the correct UCC source code
+Python library for interacting with the IBM4 using VISA
+Assumes that the IBM4 is configured with the correct UCC source code and that serial comms have been established
 This module replicates the existing code that was written for LabVIEW by Frank Peters
 R. Sheehan 27 - 5 - 2024
 """
