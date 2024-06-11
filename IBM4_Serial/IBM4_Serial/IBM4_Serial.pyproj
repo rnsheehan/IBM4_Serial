@@ -23,6 +23,7 @@
   <ItemGroup>
     <Compile Include="IBM4_Library_VISA.py" />
     <Compile Include="IBM4_Serial.py" />
+    <Compile Include="IBM4_Lib.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

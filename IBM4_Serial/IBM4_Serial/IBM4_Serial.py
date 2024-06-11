@@ -175,7 +175,7 @@ def FHP_Serial():
     except Exception as e: 
         print(e)
         
-def FindIBM4():
+def FindIBM4(loud = False):
     # Goes through all listed serial ports looking for an IBM4
     # Once a port is found, return the port name
     # FHP 30 - 5 - 2024
@@ -196,17 +196,22 @@ def FindIBM4():
             raise EnvironmentError('Unsupported platform')
         
         baud_rate = 9600
+        
+        IBM4Port = None # assign IBM4Port to None 
 
         for port in ports:
             try:
-                print('Trying: ',port)
+                if loud: print('Trying: ',port)
                 s = serial.Serial(port, baud_rate, timeout = 0.05, write_timeout = 0.1, inter_byte_timeout = 0.1, stopbits=serial.STOPBITS_ONE)
                 s.write(b'*IDN\r\n')
                 response = s.read_until('\n',size=None)
                 Code=response.rsplit(b'\r\n')
                 if len(Code) > 2:
-                    if Code[1]==b'ISBY-UCC-RevA.1':
-                        print(f'IBM4 found at {port}')
+                    #if Code[1]==b'ISBY-UCC-RevA.1':
+                    # test to see if Code[1] contains "ISBY" this is more generic
+                    # will allow for updated rev. no. without necessitating a change in code
+                    if "ISBY" in Code[1]:
+                        if loud: print(f'IBM4 found at {port}')
                         IBM4Port = port
                         s.close()
                         break # stop the search for an IBM4 at the first one you find   
@@ -559,6 +564,10 @@ def Multimeter_Test():
     IBM4_Library_VISA.Multimeter_Mode(the_instr)
 
     IBM4_Library_VISA.Close_Comms(the_instr)
+    
+def Class_Testing():
+    
+    pass
 
 def main():
     pass
