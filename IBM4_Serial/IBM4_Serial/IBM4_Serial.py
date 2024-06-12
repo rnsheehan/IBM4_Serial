@@ -17,13 +17,13 @@
 import os
 import sys
 import glob
-import serial # import the pySerial module pip install pyserial
-import pyvisa
+import re
+import serial
 import time
 import numpy
 
 import IBM4_Library_VISA # IBM4 interface based on VISA, 
-import IBM4_Lib # IbM4 interface based on Serial
+import IBM4_Lib # IBM4 interface based on Serial
 
 MOD_NAME_STR = "IBM4_Serial"
 HOME = False
@@ -568,7 +568,7 @@ def Multimeter_Test():
     
 def Class_Testing():
     
-    # Test the operation of the IBM$ class
+    # Test the operation of the IBM4 class
     # R. Sheehan 12 - 6 - 2024
 
     # instantiate an object that interfaces with the IBM4

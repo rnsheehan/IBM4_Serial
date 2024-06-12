@@ -10,6 +10,8 @@ R. Sheehan 11 - 6 - 2024
 
 # For the official notes on implementation of classes in Python, see
 # https://docs.python.org/3/tutorial/classes.html
+# Another good source of notes is the following
+# https://www.geeksforgeeks.org/python-classes-and-objects/?ref=lbp
 # For notes on proper object oriented programming consult a book on C++
 # I recommend ``Introducing C++ for Scientists, Engineers and Mathematicians'' by D. W. Capper
 
@@ -27,11 +29,10 @@ R. Sheehan 11 - 6 - 2024
 import os
 import sys
 import glob
+import re
 import serial
-import pyvisa
 import time
 import numpy
-import re
 
 MOD_NAME_STR = "IBM4_Lib"
 
@@ -76,7 +77,8 @@ class Ser_Iface(object):
             print(self.ERR_STATEMENT)
             print(e)
 
-    # destructor            
+    # destructor  
+    # https://www.geeksforgeeks.org/destructors-in-python/          
     def __del__(self):
         """
         close the link to the instrument object when it goes out of scope
