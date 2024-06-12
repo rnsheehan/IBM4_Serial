@@ -22,7 +22,8 @@ import pyvisa
 import time
 import numpy
 
-import IBM4_Library_VISA
+import IBM4_Library_VISA # IBM4 interface based on VISA, 
+import IBM4_Lib # IbM4 interface based on Serial
 
 MOD_NAME_STR = "IBM4_Serial"
 HOME = False
@@ -567,7 +568,17 @@ def Multimeter_Test():
     
 def Class_Testing():
     
-    pass
+    # Test the operation of the IBM$ class
+    # R. Sheehan 12 - 6 - 2024
+
+    # instantiate an object that interfaces with the IBM4
+    #the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+    the_dev = IBM4_Lib.Ser_Iface('COM3') # this version should connect to a named IBM4
+    
+    #the_dev.FindIBM4()
+    #the_dev.open_comms()
+    
+    del the_dev # destructor for the IBM4 object, closes comms
 
 def main():
     pass
@@ -595,6 +606,8 @@ if __name__ == '__main__':
     
     #Multimeter_Test()
     
-    FHP_Serial_2()
+    #FHP_Serial_2()
     
     #FindIBM4()
+    
+    Class_Testing()
