@@ -577,7 +577,7 @@ def Class_Testing():
     
     #the_dev.FindIBM4()
     #the_dev.open_comms()
-    
+        
     del the_dev # destructor for the IBM4 object, closes comms
 
 def main():

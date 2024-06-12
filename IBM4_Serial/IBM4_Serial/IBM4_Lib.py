@@ -16,9 +16,9 @@ R. Sheehan 11 - 6 - 2024
 # I recommend ``Introducing C++ for Scientists, Engineers and Mathematicians'' by D. W. Capper
 
 # Python does not want you to do constructor overloading
-# Use if-else ladders to implement the same effect, or use comething called classmethods
+# Use if-else ladders to implement the same effect
 # https://www.geeksforgeeks.org/method-and-constructor-overloading-in-python/
-# or use comething called classmethods
+# or use something called classmethods
 # https://docs.python.org/3/library/functions.html#classmethod
 # https://stackoverflow.com/questions/141545/how-to-overload-init-method-based-on-argument-type
 # https://stackoverflow.com/questions/682504/what-is-a-clean-pythonic-way-to-implement-multiple-constructors
@@ -89,7 +89,7 @@ class Ser_Iface(object):
             print('Closing Serial link with:',self.instr_obj.name)
             self.instr_obj.close()
         else:
-            # Do nothing no link to IBM4 established
+            # Do nothing, no link to IBM4 established
             pass
             
     def __str__(self):
@@ -175,6 +175,9 @@ class Ser_Iface(object):
                     # Ignore the errors that arise from non-IBM4 serial ports
                     pass
         except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+        except EnvironmentError as e:
             print(self.ERR_STATEMENT)
             print(e)
             
