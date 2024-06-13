@@ -577,6 +577,17 @@ def Class_Testing():
     
     #the_dev.FindIBM4()
     #the_dev.open_comms()
+    
+    the_dev.WriteSingleChnnl('A1',1.0)
+    time.sleep(1)
+    the_dev.WriteSingleChnnl('A1',1.5)
+    time.sleep(1)
+    the_dev.WriteSingleChnnl('A1',2.0)
+    time.sleep(1)
+    the_dev.WriteSingleChnnl('A1',1.7)
+    time.sleep(1)
+    the_dev.WriteSingleChnnl('A1',0.7)
+    time.sleep(1)
         
     del the_dev # destructor for the IBM4 object, closes comms
 
