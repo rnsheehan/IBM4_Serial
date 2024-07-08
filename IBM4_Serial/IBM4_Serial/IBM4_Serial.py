@@ -572,22 +572,56 @@ def Class_Testing():
     # R. Sheehan 12 - 6 - 2024
 
     # instantiate an object that interfaces with the IBM4
-    #the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
-    the_dev = IBM4_Lib.Ser_Iface('COM3') # this version should connect to a named IBM4
+    the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+    #the_dev = IBM4_Lib.Ser_Iface('COM3') # this version should connect to a named IBM4
     
     #the_dev.FindIBM4()
     #the_dev.open_comms()
     
-    the_dev.WriteSingleChnnl('A1',1.0)
-    time.sleep(1)
-    the_dev.WriteSingleChnnl('A1',1.5)
-    time.sleep(1)
-    the_dev.WriteSingleChnnl('A1',2.0)
-    time.sleep(1)
-    the_dev.WriteSingleChnnl('A1',1.7)
-    time.sleep(1)
-    the_dev.WriteSingleChnnl('A1',0.7)
-    time.sleep(1)
+    VOLT_STEP = False
+
+    if VOLT_STEP:
+        the_dev.WriteSingleChnnl('A1',1.0)
+        time.sleep(1)
+        the_dev.WriteSingleChnnl('A1',1.5)
+        time.sleep(1)
+        the_dev.WriteSingleChnnl('A1',2.0)
+        time.sleep(1)
+        the_dev.WriteSingleChnnl('A1',1.7)
+        time.sleep(1)
+        the_dev.WriteSingleChnnl('A1',0.7)
+        time.sleep(1)
+        the_dev.ReadSingleChnnl('A2', 10, True)
+        time.sleep(1)
+        
+    SWP_TEST = False
+    
+    if SWP_TEST:
+        volts = numpy.arange(0, 3.1, 0.5)
+        for v in volts:
+            the_dev.WriteSingleChnnl('A1', v)
+            time.sleep(1)
+            reading = the_dev.ReadSingleChnnl('A2', 10)
+            print('Vset:',v,', Vread: ',reading)
+            
+    READ_ALL = False
+    
+    if READ_ALL:
+        volts = numpy.arange(0, 3.1, 1)
+        for v in volts:
+            the_dev.WriteSingleChnnl('A1', v)
+            #time.sleep(1)
+            readings = the_dev.ReadAllChnnl(5)
+            print(readings)
+            
+    DIFF_READ = True
+    
+    if DIFF_READ:
+        the_dev.WriteSingleChnnl('A1',1.0)
+        the_dev.ResetBuffer()
+        time.sleep(1)
+        vals = the_dev.Diff_Read('A2', 'A3', 10)
+        print(vals)
         
     del the_dev # destructor for the IBM4 object, closes comms
 
