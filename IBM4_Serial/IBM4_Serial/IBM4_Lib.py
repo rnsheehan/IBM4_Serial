@@ -1,7 +1,7 @@
 """
 Python library for interacting with the IBM4 using Serial
 Assumes that the IBM4 is configured with the correct UCC circuit python source code
-This module replicates the existing code that was written for LabVIEW by Frank Peters
+This module replicates the existing code that was written for LabmethodEW by Frank Peters
 R. Sheehan 11 - 6 - 2024
 """
 
@@ -32,6 +32,25 @@ R. Sheehan 11 - 6 - 2024
 # Python Serial Online Documentation
 # https://pyserial.readthedocs.io/en/latest/index.html
 # https://pyserial.readthedocs.io/en/latest/pyserial_api.html
+
+# Trying to give some thought as to how to correctly implement all the different read methods
+# I was thinking about sophisticated OO concepts like Dynamic Binding and polymorphism
+# but these are not really appropriate in this case where you have a single object with multiple types of read
+# https://www.tutorialspoint.com/python/python_dynamic_binding.htm
+# https://stackoverflow.com/questions/8980676/dynamically-bind-method-to-class-instance-in-python
+# https://www.programiz.com/python-programming/polymorphism
+# https://www.w3schools.com/python/python_polymorphism.asp
+
+# It all comes down to method overloading which it looks like you implement using an if-else ladder
+# https://stackoverflow.com/questions/10202938/how-do-i-use-method-overloading-in-python
+# There is also something called Dispatch Decorators, however, I'm going to take the "Simple is better than complex" approach
+# https://www.geeksforgeeks.org/python-method-overloading/
+# Implement the read methods using single access function that calls protected read methods of the various types
+# use protected methods because private methods can be easily accessed via name mangling
+# https://www.geeksforgeeks.org/private-methods-in-python/
+# https://stackoverflow.com/questions/70528/why-are-pythons-private-methods-not-actually-private
+# https://stackoverflow.com/questions/11483366/protected-method-in-python
+# R. Sheehan 9 - 7 - 2024
 
 # import required libraries
 from ast import Try
@@ -78,7 +97,11 @@ class Ser_Iface(object):
             
             # Dictionary for the Read Mode
             self.Read_Modes = {"DC":0, "AC":1}
+            
+            # Dictionary for Accessing the Different Read Types
+            self.Read_Types = {"Single Binary":0, "Multiple Binary":1, "Single Voltage":2, "Multiple Voltage":3, "Average Voltage":4}
 
+            # Voltage Bounding Values
             self.VMAX = 3.3 # Max output voltage from IBM4
             self.VMIN = 0.0 # Min output voltage from IBM4
             self.DELTA_VMIN = 0.01 # Min voltage increment from IBM4
@@ -137,7 +160,7 @@ class Ser_Iface(object):
         self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
 
         try:            
-            # confirm that the intstrument object has been instantiated
+            # confirm that the instrument object has been instantiated
             if self.instr_obj.isOpen():
                 self.instr_obj.reset_input_buffer()
                 #self.instr_obj.reset_output_buffer() # this appears to have no effect
@@ -270,6 +293,8 @@ class Ser_Iface(object):
     def SetMode(self, read_mode = 'DC'):
         """
         read_mode is the reading mode of the IBM4 
+        
+        Inputs: 
         read_mode = 'DC' =>  IBM4 assumes analog inputs in the range [0, 3.3)
         read_mode = 'AC' =>  IBM4 assumes analog inputs in the range [-8, +8]
         read_mode = 'AC' requires BP2UP board be used with IBM4
@@ -279,7 +304,7 @@ class Ser_Iface(object):
         self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
 
         try:
-            c1 = True if self.instr_obj.isOpen() else False # confirm that the intstrument object has been instantiated
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
             c3 = True if read_mode in self.Read_Modes else False # confirm that read_mode choice is a valid one
         
             c10 = c1 and c3 # if all conditions are true then write can proceed
@@ -296,12 +321,13 @@ class Ser_Iface(object):
             print(self.ERR_STATEMENT)
             print(e)
     
-    def WriteSingleChnnl(self, output_channel, set_voltage = 0.0):
+    def WriteVoltage(self, output_channel, set_voltage = 0.0):
         
         """
         This method interfaces with the IBM4 to perform a write operation where a Voltage is output on one of the analog output pins of the IBM4.
         The output channel must be 0 or 1, while the output value should be specified in Volts (thus, floating point)
 
+        Inputs: 
         output_channel is one of A0, A1
         set_voltage is the desired voltage output value from the channel
         set_voltage must be in the range [0.0, 3.3)
@@ -311,7 +337,7 @@ class Ser_Iface(object):
         self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
 
         try:
-            c1 = True if self.instr_obj.isOpen() else False # confirm that the intstrument object has been instantiated
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
             c2 = True if output_channel in self.Write_Chnnls else False # confirm that the output channel label is correct
             c3 = True if set_voltage >= self.VMIN and set_voltage < self.VMAX else False # confirm that the set voltage value is in range
             c10 = c1 and c2 and c3 # if all conditions are true then write can proceed
@@ -348,7 +374,7 @@ class Ser_Iface(object):
         self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
 
         try:
-            c1 = True if self.instr_obj.isOpen() else False # confirm that the intstrument object has been instantiated
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
             c3 = True if percentage >= 0 and percentage < 101 else False # confirm that no. averages being taken is a sensible value
         
             c10 = c1 and c3 # if all conditions are true then write can proceed
@@ -368,19 +394,159 @@ class Ser_Iface(object):
             print(e)
     
     # methods for obtaining data from the IBM4
-    
-    def ReadSingleChnnl(self, input_channel, no_averages = 10, loud = False):
+    def ReadVoltage(self, input_channel, read_type = 'Single Voltage', no_reads = 10, loud = False):
         
-        # This method interfaces with the IBM4 to perform a read operation on a single read channel
-        # The input channel must be between 0 and 3, And the number of readings should be greater than zero. 
-        # At some point the number of reading will be too high and will cause a timeout error. This should 
-        # only happen for numbers larger than 10000. The output will be a single Voltage (floating point) value representing the average of the multiple readings.
-        # Alternate read operations exist covering binary or floating point, single reading, multiple readings, and an average of multiple readings (floating point only).
-        # R. Sheehan 27 - 5 - 2024
+        """
+        Method for accessing the various types of Voltage Readings that are available
+        """
+
+        # This method is the equivalent of the polymorphic VI implementation of Read in LabVIEW
+        # Python is flexible enough that it can handle a function with multiple return types
+        # R. Sheehan 9 - 7 - 2024
+
+        self.FUNC_NAME = ".ReadVoltage()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if input_channel in self.Read_Chnnls else False # confirm that the input channel label is correct
+            c3 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
+            c4 = True if read_type in self.Read_Types else False # confirm that the read_type has been chosen correctly
+        
+            c10 = c1 and c2 and c3 and c4 # if all conditions are true then write can proceed
+            
+            if c10:
+                if read_type == 'Single Voltage':
+                    return self.ReadSingleVoltage(input_channel)
+                elif read_type == 'Multiple Voltage':
+                    return self.ReadMultipleVoltage(input_channel, no_reads)
+                elif read_type == 'Average Voltage':
+                    return self.ReadAverageVoltage(input_channel, no_reads)
+                elif read_type == 'Single Binary':
+                    return self.ReadSingleBinary(input_channel)
+                elif read_type == 'Multiple Binary':
+                    return self.ReadMultipleBinary(input_channel, no_reads)
+                else:
+                    return self.ReadSingleVoltage(input_channel)
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\ninput_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_reads outside range [3, 10001]'
+                if not c4:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nread_type incorrectly specified'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)    
     
-        # input_channel is one of A2, A3, A4, A5, D2
-        # no_averages is the num. of readings that are to be averaged
-    
+    def ReadSingleVoltage(self, input_channel, loud = False):
+        
+        """        
+        This method interfaces with the IBM4 to perform a read operation. The output will in floating point format (thus, in Volts).
+        Only a single read operation is made with this method. Alternate read operations exist covering binary or floating point, single reading, 
+        multiple readings, and an average of multiple readings (floating point only).
+            
+        Inputs:
+        input_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        
+        Outputs:
+        res (type: float) is the voltage reading at input_channel
+        """
+        
+        self.FUNC_NAME = ".ReadSingleVoltage()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if input_channel in self.Read_Chnnls else False # confirm that the input channel label is correct
+        
+            c10 = c1 and c2 # if all conditions are true then write can proceed
+            
+            if c10:
+                no_reads = 1 # 
+                read_cmd = 'Read%(v1)d:%(v2)d\r\n'%{"v1":self.Read_Chnnls[input_channel], "v2":no_reads} # generate the read command
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes                
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed                
+                vals = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list
+                res = float(vals[-1])
+                self.ResetBuffer() # reset buffer between write, read cmd pairs
+                if loud: 
+                    print(read_result)
+                    print(vals) # print the parsed values
+                return res # return the relevant value
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\ninput_channel outside range {A0, A1}'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+            
+    def ReadSingleBinary(self, input_channel, loud = False):
+        
+        """        
+        This method interfaces with the IBM4 to perform a read operation. The output will in binary format (thus, integer). Only a single read operation is made with this method.  
+        Alternate read operations exist covering binary or floating point, single reading, multiple readings, and an average of multiple readings (floating point only).
+            
+        Inputs:
+        input_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        
+        Outputs:
+        res (type: float) is the voltage reading at input_channel
+        """
+        
+        self.FUNC_NAME = ".ReadSingleBinary()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if input_channel in self.Read_Chnnls else False # confirm that the input channel label is correct
+        
+            c10 = c1 and c2 # if all conditions are true then write can proceed
+            
+            if c10:
+                no_reads = 1 # 
+                read_cmd = 'BRead%(v1)d:%(v2)d\r\n'%{"v1":self.Read_Chnnls[input_channel], "v2":no_reads} # generate the read command
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes                
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed                
+                vals = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list
+                res = int(vals[-1])
+                self.ResetBuffer() # reset buffer between write, read cmd pairs
+                if loud: 
+                    print(read_result)
+                    print(vals) # print the parsed values
+                return res # return the relevant value
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\ninput_channel outside range {A0, A1}'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+
+    def ReadAverageVoltage(self, input_channel, no_reads = 10, loud = False):
+        
+        """        
+        This method interfaces with the IBM4 to perform a read operation on a single read channel. The input channel must be between 0 and 3, 
+        and the number of readings should be greater than zero. At some point the number of reading will be too high and will cause a timeout error. This should 
+        only happen for numbers larger than 10000. The output will be a single Voltage (floating point) value representing the average of the multiple readings.
+        Alternate read operations exist covering binary or floating point, single reading, multiple readings, and an average of multiple readings (floating point only).
+            
+        Inputs:
+        input_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        no_reads (type: int) is the num. of readings to be taken at the analog input channel
+        
+        Outputs:
+        res (type: float) is the averaged voltage reading at input_channel
+        """
+        
         # Python nonsense
         # Use of vals = re.findall("[-+]?\d+[\.]?\d*", instrument_obj.read()) throws an error in Python 3.12
         # SyntaxWarning: invalid escape sequence '\d' vals = re.findall("[-+]?\d+[\.]?\d*", instrument_obj.read())
@@ -408,115 +574,237 @@ class Ser_Iface(object):
         # it might be possible to do this using readline to copy the entire IBM4 buffer into a local memory buffer
         # but the overhead on that would be just as bad as what I've implemented here
         # It seems other have attempted to solve this problem but have ended up implementing what I have here
-        # other solutions seem to involve building the serial monitor loop inside this code, similar to what's been implemented in LabVIEW
+        # other solutions seem to involve building the serial monitor loop inside this code, similar to what's been implemented in LabmethodEW
         # https://stackoverflow.com/questions/1093598/pyserial-how-to-read-the-last-line-sent-from-a-serial-device
         # R. Sheehan 8 - 7 - 2024
-        
 
-        self.FUNC_NAME = ".ReadSingleChnnl()" # use this in exception handling messages
+        self.FUNC_NAME = ".ReadAverageVoltage()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
 
         try:
-            c1 = True if self.instr_obj.isOpen() else False # confirm that the intstrument object has been instantiated
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
             c2 = True if input_channel in self.Read_Chnnls else False # confirm that the input channel label is correct
-            c3 = True if no_averages > 2 and no_averages < 104 else False # confirm that no. averages being taken is a sensible value
+            c3 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
         
             c10 = c1 and c2 and c3 # if all conditions are true then write can proceed
             
             if c10:
-                read_cmd = 'Average%(v1)d:%(v2)d\r\n'%{"v1":self.Read_Chnnls[input_channel], "v2":no_averages} # generate the read command
+                read_cmd = 'Average%(v1)d:%(v2)d\r\n'%{"v1":self.Read_Chnnls[input_channel], "v2":no_reads} # generate the read command
                 self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes                
                 # Working
                 read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed                
                 vals = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list
+                res = float(vals[-1])
                 self.ResetBuffer() # reset buffer between write, read cmd pairs
                 if loud: 
                     print(read_result)
                     print(vals) # print the parsed values
-                return float(vals[-1]) # return the relevant value
+                return res # return the relevant value
             else:
                 if not c1:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
                 if not c2:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\ninput_channel outside range {A0, A1}'
                 if not c3:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 103]'
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_reads outside range [3, 10001]'
                 raise Exception
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
             
-    def ReadAllChnnl(self, no_averages = 10, loud = False):
+    def ReadAverageVoltageAllChnnl(self, no_reads = 10, loud = False):
     
-        # This method interfaces with the IBM4 to perform an averaging read operation on all read channels
-        # returns a list of voltage readings at each analog input channel [A2, A3, A4, A5, D2]
+        """
+        This method interfaces with the IBM4 to perform an averaging read operation on all read channels
+        returns a list of voltage readings at each analog input channel [A2, A3, A4, A5, D2]
 
-        # no_averages is the number of averages to perform on each voltage reading
-
-        FUNC_NAME = ".ReadAllChnnl()" # use this in exception handling messages
+        Inputs: 
+        no_reads (type: int) is the num. of readings to be taken at the analog input channel
+        
+        Outputs: 
+        read_vals (type: numpy array) contains the averaged voltage reading at each analog input channel
+        """
+        
+        FUNC_NAME = ".ReadAverageVoltageAllChnnl()" # use this in exception handling messages
         ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
         try:
-            c1 = True if self.instr_obj.isOpen() else False # confirm that the intstrument object has been instantiated
-            c3 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c3 = True if no_reads > 3 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
         
             c10 = c1 and c3 # if all conditions are true then write can proceed
         
             if c10:
                 read_vals = numpy.array([]) # instantiate an empty numpy array
                 for item in self.Read_Chnnls:
-                    value = self.ReadSingleChnnl(item, no_averages, loud)
+                    value = self.ReadAverageVoltage(item, no_reads, loud)
                     read_vals = numpy.append(read_vals, value)
-                    if loud: print('Voltages at AI: ',read_vals)
+                    if loud: 
+                        print('Voltages at AI: ',read_vals)
                 return read_vals
             else:
                 if not c1:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
                 if not c3:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 103]'
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_reads outside range [3, 10001]'
                 raise Exception
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
             
-    def Diff_Read(self, pos_channel, neg_channel, no_averages, loud = False):
+    def ReadMultipleVoltage(self, input_channel, no_reads = 10, loud = False):
+        
+        """
+        This method interfaces with the IBM4 to perform a read operation.
+        The number of readings should be greater than zero. At some point the number of reading will be too high and will cause a timeout error. 
+        This should only happen for numbers larger than 10000. The output will be an array of floating point (Voltage) values.
+        Alternate read operations exist covering binary or floating point, single reading, multiple readings, and an average of multiple readings (floating point only).
+        
+        Inputs:
+        input_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        no_reads (type: int) is the num. of readings that are to be averaged
+        
+        Outputs: 
+        res (type: list) contains three elements
+        res[0] = average of all voltage readings
+        res[1] = amplitude voltage readings
+        res[2] = numpy array with all voltage read values
+        """
 
-        # This VI interfaces with the IBM4 to perform a differential read operation.
-        # The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
-        # At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
-        # larger than 10000. The output will be a single Voltage (floating point) value representing the average of the multiple readings.
+        self.FUNC_NAME = ".ReadMultipleVoltage()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if input_channel in self.Read_Chnnls else False # confirm that the input channel label is correct
+            c3 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
+        
+            c10 = c1 and c2 and c3 # if all conditions are true then write can proceed
+            
+            if c10:
+                read_cmd = 'Read%(v1)d:%(v2)d\r\n'%{"v1":self.Read_Chnnls[input_channel], "v2":no_reads} # generate the read command
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes                
+                # Working
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed                
+                vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list
+                self.ResetBuffer() # reset buffer between write, read cmd pairs
+                vals_flt = numpy.float_(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
+                vals_mean = numpy.mean(vals_flt) # compute the average of all the diff_reads
+                vals_delta = 0.5*( numpy.max(vals_flt) - numpy.min(vals_flt) ) # compute the range of the diff_read
+                res = [vals_mean, vals_delta, vals_flt]
+                if loud: 
+                    print(read_result)
+                    print(vals_flt) # print the parsed values
+                return res # return the array containing all the voltage values
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\ninput_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 10001]'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+            
+    def ReadMultipleBinary(self, input_channel, no_reads = 10, loud = False):
+        
+        """
+        This VI interfaces with the IBM4 to perform a read operation. The number of readings should be greater than zero. At some point the 
+        number of reading will be too high and will cause a timeout error. This should only happen for numbers larger than 10000. The output will be an array of integer 
+        values. Alternate read operations exist covering binary or floating point, single reading, multiple readings, and an average of multiple readings (floating point only).
+        
+        Inputs:
+        input_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        no_reads (type: int) is the num. of readings that are to be averaged
+        
+        Outputs: 
+        vals_int (type: numpy array) contains binary read values
+        """
+
+        self.FUNC_NAME = ".ReadMultipleBinary()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if input_channel in self.Read_Chnnls else False # confirm that the input channel label is correct
+            c3 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
+        
+            c10 = c1 and c2 and c3 # if all conditions are true then write can proceed
+            
+            if c10:
+                read_cmd = 'BRead%(v1)d:%(v2)d\r\n'%{"v1":self.Read_Chnnls[input_channel], "v2":no_reads} # generate the read command
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes                
+                # Working
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed                
+                vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list
+                self.ResetBuffer() # reset buffer between write, read cmd pairs
+                vals_int = numpy.int_(vals_str[-no_reads:]) # convert the list of strings to ints using numpy, save as numpy array (better)
+                if loud: 
+                    print(read_result)
+                    print(vals_int) # print the parsed values
+                return vals_int # return the array containing all the binary values
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\ninput_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 10001]'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+            
+    def DiffReadMultiple(self, pos_channel, neg_channel, no_reads, loud = False):
+        
+        """
+        This method interfaces with the IBM4 to perform a differential read operation.
+        The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
+        At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
+        larger than 10000. The output will be a single Voltage (floating point) value representing the average of the multiple readings.
     
-        # pos_channel is one of A2, A3, A4, A5, D2
-        # neg_channel is one of A2, A3, A4, A5, D2, accepting that it is not the same as pos_channel    
-        # no_averages is the num. of readings that are to be averaged
+        Inputs:
+        pos_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        neg_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2', accepting that it is not the same as pos_channel    
+        no_reads (type: int) is the num. of readings to be taken at the analog input channel
+        
+        Outputs:
+        res (type: list) contains three elements
+        res[0] = average of all differential readings
+        res[1] = variation in differential readings
+        res[2] = numpy array with all differential read values
+        """
 
-        self.FUNC_NAME = ".Diff_Read()" # use this in exception handling messages
+        self.FUNC_NAME = ".DiffReadMultiple()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
     
         try:
-            c1 = True if self.instr_obj.isOpen() else False # confirm that the intstrument object has been instantiated
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
             c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
             c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
             c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
-            c5 = True if no_averages > 2 and no_averages < 104 else False # confirm that no. averages being taken is a sensible value
+            c5 = True if no_reads > 2 and no_reads < 104 else False # confirm that no. averages being taken is a sensible value
         
             c10 = c1 and c2 and c3 and c4 and c5 # if all conditions are true then write can proceed
             
             if c10:
-                read_cmd = 'Diff_Read%(v1)d:%(v2)d:%(v3)d\r\n'%{"v1":self.Read_Chnnls[pos_channel], "v2":self.Read_Chnnls[neg_channel], "v3":no_averages}
+                read_cmd = 'Diff_Read%(v1)d:%(v2)d:%(v3)d\r\n'%{"v1":self.Read_Chnnls[pos_channel], "v2":self.Read_Chnnls[neg_channel], "v3":no_reads}
                 self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes
                 read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed
                 vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list of strings
                 #vals_flt = [float(x) for x in vals_str] # convert the list of strings to floats, save as a list
-                # only interested in the last no_averages values so read backwards into the vals_str list using list-slice operator
-                vals_flt = numpy.float_(vals_str[-no_averages:]) # convert the list of strings to floats using numpy, save as numpy array (better)
+                # only interested in the last no_reads values so read backwards into the vals_str list using list-slice operator
+                vals_flt = numpy.float_(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
                 if loud: 
                     print(read_result)
                     print(vals_flt) # print the parsed values
                 self.ResetBuffer() # clear the IBM4 buffer after each read            
                 vals_mean = numpy.mean(vals_flt) # compute the average of all the diff_reads
                 vals_delta = 0.5*( numpy.max(vals_flt) - numpy.min(vals_flt) ) # compute the range of the diff_read
-                return [vals_mean, vals_delta, vals_flt] # return the relevant numerical values
+                res = [vals_mean, vals_delta, vals_flt]
+                return res # return the relevant numerical values
             else:
                 if not c1:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'

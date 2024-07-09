@@ -19,6 +19,7 @@ import sys
 import glob
 import re
 import serial
+import pyvisa
 import time
 import numpy
 
@@ -515,7 +516,7 @@ def IBM4_Lib_Hacking():
     
     #IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A2', 10, True)
     #IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A3', 10, True)
-    diff_res = IBM4_Library_VISA.Diff_Read(the_instr, 'A2', 'A3', 10, True)
+    diff_res = IBM4_Library_VISA.DiffReadMultiple(the_instr, 'A2', 'A3', 10, True)
     print('diff-read = %(v1)0.3f +/- %(v2)0.3f'%{"v1":diff_res[0], "v2":diff_res[1]})
     # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A4', 10)
     # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A5', 10)
@@ -581,48 +582,120 @@ def Class_Testing():
     VOLT_STEP = False
 
     if VOLT_STEP:
-        the_dev.WriteSingleChnnl('A1',1.0)
+        the_dev.WriteVoltage('A1',1.0)
         time.sleep(1)
-        the_dev.WriteSingleChnnl('A1',1.5)
+        the_dev.WriteVoltage('A1',1.5)
         time.sleep(1)
-        the_dev.WriteSingleChnnl('A1',2.0)
+        the_dev.WriteVoltage('A1',2.0)
         time.sleep(1)
-        the_dev.WriteSingleChnnl('A1',1.7)
+        the_dev.WriteVoltage('A1',1.7)
         time.sleep(1)
-        the_dev.WriteSingleChnnl('A1',0.7)
+        the_dev.WriteVoltage('A1',0.7)
         time.sleep(1)
-        the_dev.ReadSingleChnnl('A2', 10, True)
+        the_dev.ReadAverageVoltage('A2', 10, True)
         time.sleep(1)
         
     SWP_TEST = False
     
     if SWP_TEST:
-        volts = numpy.arange(0, 3.1, 0.5)
+        Nreads = 11 # no. readinngs at each channel
+        NAI = 5 # no. analog input channels
+        volts = numpy.arange(0, 3.1, 1)
+        start = time.time()
         for v in volts:
-            the_dev.WriteSingleChnnl('A1', v)
-            time.sleep(1)
-            reading = the_dev.ReadSingleChnnl('A2', 10)
+            the_dev.WriteVoltage('A1', v)
+            reading = the_dev.ReadAverageVoltage('A2', Nreads)
             print('Vset:',v,', Vread: ',reading)
+        end = time.time()
+        print("%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":len(volts)*Nreads, "v2":end-start})
             
     READ_ALL = False
     
     if READ_ALL:
-        volts = numpy.arange(0, 3.1, 1)
+        Nreads = 11 # no. readinngs at each channel
+        NAI = 5 # no. analog input channels
+        volts = numpy.arange(0, 3.1, 0.5)
+        start = time.time()
         for v in volts:
-            the_dev.WriteSingleChnnl('A1', v)
+            the_dev.WriteVoltage('A1', v)
             #time.sleep(1)
-            readings = the_dev.ReadAllChnnl(5)
+            readings = the_dev.ReadAverageVoltageAllChnnl(Nreads)
             print(readings)
+        end = time.time()
+        print("%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":len(volts)*Nreads*NAI, "v2":end-start})
             
-    DIFF_READ = True
+    DIFF_READ = False
     
     if DIFF_READ:
-        the_dev.WriteSingleChnnl('A1',1.0)
+        Nreads = 23
+        Rval = 10.0 / 1000.0 # sense resistance in kOhm
+        Vset = 1.5
+        the_dev.WriteVoltage('A1',Vset)
         the_dev.ResetBuffer()
         time.sleep(1)
-        vals = the_dev.Diff_Read('A2', 'A3', 10)
-        print(vals)
+        vals = the_dev.DiffReadMultiple('A2', 'A4', Nreads)
+        print("Set Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
+        vals = the_dev.DiffReadMultiple('A2', 'A3', Nreads)
+        print("Sense Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
+        print("Sense Current: %(v1)0.1f +/- %(v2)0.1f (mA)"%{"v1":vals[0]/Rval,"v2":vals[1]/Rval})
+        vals = the_dev.DiffReadMultiple('A3', 'A4', Nreads)
+        print("Diode Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
         
+    MULTI_READ = True
+    
+    if MULTI_READ:
+        # can compare the timing of each of the different measurement types
+        # https://stackoverflow.com/questions/7370801/how-do-i-measure-elapsed-time-in-python
+        # ReadAverageVoltage is slightly faster than ReadAverageVoltageMultiple
+        # which is weird considering that ReadAverageVoltage has to do extra processing on chip
+        # Sample Rate for IBM4 is variable, as we know and find annoying
+        # Can see that nothing wrong with timing of ReadAverageVoltageAllChnnl
+        # Execution of ReadAverageVoltageAllChnnl takes ~ 5 ReadAverageVoltage which makes sense really
+        # since ReadAverageVoltageAllChnnl consists of 5 calls to ReadAverageVoltage
+        # R. Sheehan 9 - 7 - 2024
+        
+        Nreads = 501
+        Vset = 1.5
+        the_dev.WriteVoltage('A1',Vset)
+        the_dev.ResetBuffer()
+        time.sleep(1)
+        
+        # time the measurement
+        start = time.time()
+        #avg, err, vals = the_dev.ReadMultipleVoltage('A3', Nreads)
+        avg, err, vals = the_dev.ReadVoltage('A3', 'Multiple Voltage', Nreads)
+        end = time.time()
+        deltaT = end-start
+        measT = deltaT/(float(Nreads))
+        SR = 1.0/measT
+        print("%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":Nreads, "v2":deltaT})
+        print("%(v1)0.4f secs / measurement"%{"v1":measT})
+        print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR })
+        print("Measured Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":avg,"v2":err})
+        
+        start = time.time()
+        #val = the_dev.ReadAverageVoltage('A3',Nreads)
+        val = the_dev.ReadVoltage('A3','Average Voltage', Nreads)
+        end = time.time()
+        deltaT = end-start
+        measT = deltaT/(float(Nreads))
+        SR = 1.0/measT
+        print("\n%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":Nreads, "v2":deltaT})
+        print("%(v1)0.4f secs / measurement"%{"v1":measT})
+        print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR })
+        print("Measured Voltage: %(v1)0.3f (V)"%{"v1":val})
+        
+        start = time.time()
+        val = the_dev.ReadAverageVoltageAllChnnl(Nreads)
+        end = time.time()
+        deltaT = end-start
+        measT = deltaT/(float(Nreads*5))
+        SR = 1.0/measT
+        print("\n%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":Nreads*5, "v2":deltaT})
+        print("%(v1)0.4f secs / measurement"%{"v1":measT})
+        print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
+        print("Measured Voltages: ", val)
+
     del the_dev # destructor for the IBM4 object, closes comms
 
 def main():
