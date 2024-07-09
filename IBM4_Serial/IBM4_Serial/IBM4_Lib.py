@@ -441,6 +441,57 @@ class Ser_Iface(object):
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)    
+            
+    def DifferentialRead(self, pos_channel, neg_channel, read_type = 'Single Voltage', no_reads = 10, loud = False):
+        
+        """
+        Method for accessing the various types of Differential Voltage Readings that are available
+        """
+
+        # This method is the equivalent of the polymorphic VI implementation of DRead in LabVIEW
+        # Python is flexible enough that it can handle a function with multiple return types
+        # R. Sheehan 9 - 7 - 2024
+
+        self.FUNC_NAME = ".DifferentialRead()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
+            c5 = True if no_reads > 2 and no_reads < 104 else False # confirm that no. averages being taken is a sensible value
+        
+            c10 = c1 and c2 and c3 and c4 and c5 # if all conditions are true then write can proceed
+            
+            if c10:
+                if read_type == 'Single Voltage':
+                    pass
+                elif read_type == 'Multiple Voltage':
+                    return self.DiffReadMultiple(pos_channel, neg_channel, no_reads)
+                elif read_type == 'Average Voltage':
+                    pass
+                elif read_type == 'Single Binary':
+                    pass
+                elif read_type == 'Multiple Binary':
+                    pass
+                else:
+                    pass
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c4:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
+                if not c5:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 103]'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)    
     
     def ReadSingleVoltage(self, input_channel, loud = False):
         
