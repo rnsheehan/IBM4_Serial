@@ -52,6 +52,13 @@ R. Sheehan 11 - 6 - 2024
 # https://stackoverflow.com/questions/11483366/protected-method-in-python
 # R. Sheehan 9 - 7 - 2024
 
+# Output formatting in python
+# https://docs.python.org/3/tutorial/inputoutput.html
+# https://www.geeksforgeeks.org/python-output-formatting/
+# https://realpython.com/python-formatted-output/
+# https://python-course.eu/python-tutorial/formatted-output.php
+# R. Sheehan 10 - 7 - 2024
+
 # import required libraries
 from ast import Try
 import os
@@ -1098,4 +1105,135 @@ class Ser_Iface(object):
             print(e)
             
     # methods to initiate multimeter mode
+    
+    def MultimeterMode(self):
+    
+        """
+        Method for interfacing to the IBM4 and using it as a digitial multimeter
+        Output voltage from the Analog outs, Read voltage from the Analog inputs
+        Switch the PWM output On / Off as required
+        Perform differential measurements
+        It will be assumed that comms to the device is open
+        """        
+
+        self.MultimeterMode = ".Multimeter_Mode()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            if self.instr_obj.isOpen():
+                # Simple menu allows you to operate the IBM4 continuously
             
+                # Start do-while loop to process the multimeter options
+                do = True        
+                while do: 
+                    action = int( input( self.MultimeterPrompt() ) )
+                    if action == -1:
+                        print('\nEnd Program\n')
+                        do = False
+                    elif action == 1:
+                        #idn_prompt(instrument_obj)
+                        continue
+                    elif action == 2:
+                        self.VoltOutputPrompt('A0')
+                        continue
+                    elif action == 3:
+                        self.VoltOutputPrompt('A1')
+                        continue
+                    elif action == 4:
+                        self.PWMPrompt()
+                        continue
+                    elif action == 5:
+                        self.GroundIBM4Prompt()
+                        continue
+                    elif action == 6:
+                        self.ReadInputsPrompt()
+                        continue
+                    elif action == 7:
+                        self.DiffReadPrompt()
+                        continue
+                    else:
+                        #action = int(input(prompt)) # don't make this call here, otherwise prompt for input is executed twice
+                        continue
+            else:
+                self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+    
+    def MultimeterPrompt(self):
+        """
+        text processing for the multimeter mode prompt
+        """
+        
+        # Define options for menu
+        start = 'Options for IBM4 Multimeter Mode:\n';
+        option1 = 'Identify Device = 1\n'; # Query *IDN
+        option2 = 'Set Analog Output A0 = 2\n'; # Set voltage at A0
+        option3 = 'Set Analog Output A1 = 3\n'; # Set voltage at A1
+        option4 = 'Set PWM = 4\n'; # Set PWM 
+        option5 = 'Re-Set Analog Outputs = 5\n'; # Gnd all outputs
+        option6 = 'Read All Analog Inputs = 6\n'; # Read voltages at each of the Analog inputs
+        option7 = 'Perform Differential Measurement = 7\n'; # Perform differential voltage measurement
+        option8 = 'End program Input = -1\n';
+        message = 'Input: ';
+        newline = '\n';
+        prompt = newline + start + option1 + option2 + option3 + option4 + option5 + option6 + option7 + option8 + message
+    
+        return prompt
+
+    # def IDNPprompt(self):
+    #     # perform the *IDN action
+    #     # R. Sheehan 4 - 6-  2024    
+    #     self.query('*IDN')
+    #     str_val = self.read()
+    #     if "ISBY" in str_val:
+    #         print('\nCurrent Device:',self.resource_name)
+    #     self.clear()
+
+    def VoltOutputPrompt(self, output_channel):
+        """
+        Method for requesting the user input a voltage value to output from some channel
+        """
+        
+        print('\nSet Analog Output %(v1)s'%{"v1":output_channel})
+        axvolt = float(input('Enter a voltage value: '))
+        self.WriteVoltage(output_channel, axvolt)
+    
+    def GroundIBM4Prompt(self):
+        """
+        zero both analog output channels
+        """
+        
+        print('\nGround Analog Outputs\n')
+        self.ZeroIBM4()
+    
+    def ReadInputsPrompt(self):
+        """
+        Read the voltage at all analog inputs
+        """
+        
+        print('\nRead All Analog Inputs')
+        ch_vals = self.ReadAverageVoltageAllChnnl()
+        print('AI voltages: ',ch_vals)
+    
+    def PWMPrompt(self):
+        """
+        Method for getting the IBM4 to output PWM signal
+        """
+
+        print('\nSet PWM Output')
+        pwmval = int( input( 'Enter PWM percentage: ' ) )
+        self.WritePWM(pwmval)
+    
+    def DiffReadPrompt(self):
+        """
+        Method for performing a differential read
+        """
+        
+        print('\nPerform Differential Measurement')
+        pos_chn = str( input('Enter pos-chan: ') )
+        neg_chn = str( input('Enter neg-chan: ') )
+        #n_ave = int( input('Enter no. averages: ') )
+        diff_res = self.DiffReadMultiple(pos_chn, neg_chn)
+        print('Differential Read Value = %(v1)0.3f +/- %(v2)0.3f (V)'%{"v1":diff_res[0], "v2":diff_res[1]})

@@ -624,7 +624,7 @@ def Class_Testing():
         end = time.time()
         print("%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":len(volts)*Nreads*NAI, "v2":end-start})
             
-    DIFF_READ = True
+    DIFF_READ = False
     
     if DIFF_READ:
         Nreads = 237
@@ -695,6 +695,11 @@ def Class_Testing():
         print("%(v1)0.4f secs / measurement"%{"v1":measT})
         print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
         print("Measured Voltages: ", val)
+        
+    DMM_MODE = True
+    
+    if DMM_MODE:
+        the_dev.MultimeterMode()
 
     del the_dev # destructor for the IBM4 object, closes comms
 
