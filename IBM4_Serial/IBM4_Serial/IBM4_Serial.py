@@ -624,24 +624,24 @@ def Class_Testing():
         end = time.time()
         print("%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":len(volts)*Nreads*NAI, "v2":end-start})
             
-    DIFF_READ = False
+    DIFF_READ = True
     
     if DIFF_READ:
-        Nreads = 23
+        Nreads = 237
         Rval = 10.0 / 1000.0 # sense resistance in kOhm
-        Vset = 1.5
+        Vset = 1.25
         the_dev.WriteVoltage('A1',Vset)
         the_dev.ResetBuffer()
         time.sleep(1)
-        vals = the_dev.DiffReadMultiple('A2', 'A4', Nreads)
+        vals = the_dev.DifferentialRead('A2', 'A4', 'Multiple Voltage', Nreads)
         print("Set Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
-        vals = the_dev.DiffReadMultiple('A2', 'A3', Nreads)
+        vals = the_dev.DifferentialRead('A2', 'A3', 'Multiple Voltage', Nreads)
         print("Sense Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
         print("Sense Current: %(v1)0.1f +/- %(v2)0.1f (mA)"%{"v1":vals[0]/Rval,"v2":vals[1]/Rval})
-        vals = the_dev.DiffReadMultiple('A3', 'A4', Nreads)
+        vals = the_dev.DifferentialRead('A3', 'A4', 'Multiple Voltage', Nreads)
         print("Diode Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
         
-    MULTI_READ = True
+    MULTI_READ = False
     
     if MULTI_READ:
         # can compare the timing of each of the different measurement types

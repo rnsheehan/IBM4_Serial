@@ -460,23 +460,23 @@ class Ser_Iface(object):
             c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
             c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
             c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
-            c5 = True if no_reads > 2 and no_reads < 104 else False # confirm that no. averages being taken is a sensible value
+            c5 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
         
             c10 = c1 and c2 and c3 and c4 and c5 # if all conditions are true then write can proceed
             
             if c10:
                 if read_type == 'Single Voltage':
-                    pass
+                    return self.DiffReadSingle(pos_channel, neg_channel)
                 elif read_type == 'Multiple Voltage':
                     return self.DiffReadMultiple(pos_channel, neg_channel, no_reads)
                 elif read_type == 'Average Voltage':
-                    pass
+                    return self.DiffReadAverage(pos_channel, neg_channel, no_reads)
                 elif read_type == 'Single Binary':
-                    pass
+                    return self.DiffReadSingleBinary(pos_channel, neg_channel)
                 elif read_type == 'Multiple Binary':
-                    pass
+                    return self.DiffReadMultipleBinary(pos_channel, neg_channel, no_reads)
                 else:
-                    pass
+                    return self.DiffReadSingle(pos_channel, neg_channel)
             else:
                 if not c1:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
@@ -487,12 +487,14 @@ class Ser_Iface(object):
                 if not c4:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
                 if not c5:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 103]'
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 10000]'
                 raise Exception
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)    
     
+    # single ended voltage reading methods
+
     def ReadSingleVoltage(self, input_channel, loud = False):
         
         """        
@@ -548,7 +550,7 @@ class Ser_Iface(object):
         input_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
         
         Outputs:
-        res (type: float) is the voltage reading at input_channel
+        res (type: int) is the voltage reading at input_channel
         """
         
         self.FUNC_NAME = ".ReadSingleBinary()" # use this in exception handling messages
@@ -807,14 +809,125 @@ class Ser_Iface(object):
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
+    
+    # differential voltage reading methods
+
+    def DiffReadSingle(self, pos_channel, neg_channel, loud = False):
+        
+        """
+        This method interfaces with the IBM4 to perform a differential read operation.
+        The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
+        At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
+        larger than 10000. The output will be a single Voltage (floating point) value.
+    
+        Inputs:
+        pos_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        neg_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2', accepting that it is not the same as pos_channel    
+        
+        Outputs:
+        res (type: float) is the voltage reading at input_channel
+        """
+
+        self.FUNC_NAME = ".DiffReadSingle()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+    
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
+        
+            c10 = c1 and c2 and c3 and c4 # if all conditions are true then write can proceed
             
-    def DiffReadMultiple(self, pos_channel, neg_channel, no_reads, loud = False):
+            if c10:
+                no_reads = 1
+                read_cmd = 'Diff_Read%(v1)d:%(v2)d:%(v3)d\r\n'%{"v1":self.Read_Chnnls[pos_channel], "v2":self.Read_Chnnls[neg_channel], "v3":no_reads}
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed
+                vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list of strings
+                res = float(vals_str[-1])
+                self.ResetBuffer() # clear the IBM4 buffer after each read            
+                if loud: 
+                    print(read_result)
+                    print(res) 
+                return res
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c4:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e) 
+            
+    def DiffReadAverage(self, pos_channel, neg_channel, no_reads, loud = False):
         
         """
         This method interfaces with the IBM4 to perform a differential read operation.
         The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
         At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
         larger than 10000. The output will be a single Voltage (floating point) value representing the average of the multiple readings.
+    
+        Inputs:
+        pos_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        neg_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2', accepting that it is not the same as pos_channel    
+        no_reads (type: int) is the num. of readings to be taken at the analog input channel
+        
+        Outputs:
+        res (type: float) is the voltage reading at input_channel
+        """
+
+        self.FUNC_NAME = ".DiffReadSingle()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+    
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
+            c5 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
+        
+            c10 = c1 and c2 and c3 and c4 and c5 # if all conditions are true then write can proceed
+            
+            if c10:
+                read_cmd = 'Diff_Average%(v1)d:%(v2)d:%(v3)d\r\n'%{"v1":self.Read_Chnnls[pos_channel], "v2":self.Read_Chnnls[neg_channel], "v3":no_reads}
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed
+                vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list of strings
+                res = float(vals_str[-1])
+                self.ResetBuffer() # clear the IBM4 buffer after each read            
+                if loud: 
+                    print(read_result)
+                    print(res) 
+                return res
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c4:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
+                if not c5:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 10000]'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e) 
+            
+    def DiffReadMultiple(self, pos_channel, neg_channel, no_reads = 10, loud = False):
+        
+        """
+        This method interfaces with the IBM4 to perform a differential read operation.
+        The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
+        At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
+        larger than 10000. The output will be an array of Voltage (floating point) values.
     
         Inputs:
         pos_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
@@ -836,7 +949,7 @@ class Ser_Iface(object):
             c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
             c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
             c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
-            c5 = True if no_reads > 2 and no_reads < 104 else False # confirm that no. averages being taken is a sensible value
+            c5 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
         
             c10 = c1 and c2 and c3 and c4 and c5 # if all conditions are true then write can proceed
             
@@ -866,7 +979,123 @@ class Ser_Iface(object):
                 if not c4:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
                 if not c5:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 103]'
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 10000]'
+                raise Exception
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e) 
+            
+    def DiffReadSingleBinary(self, pos_channel, neg_channel, loud = False):
+        
+        """
+        This method interfaces with the IBM4 to perform a differential read operation.
+        The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
+        At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
+        larger than 10000. The output will in binary format (thus, integer). Only a single read operation is made with this method. 
+    
+        Inputs:
+        pos_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        neg_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2', accepting that 
+        it is not the same as pos_channel    
+        
+        Outputs:
+        res (type: int) is the voltage reading at input_channel
+        """
+
+        self.FUNC_NAME = ".DiffReadSingleBinary()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+    
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
+        
+            c10 = c1 and c2 and c3 and c4 # if all conditions are true then write can proceed
+            
+            if c10:
+                no_reads = 1
+                read_cmd = 'Diff_BRead%(v1)d:%(v2)d:%(v3)d\r\n'%{"v1":self.Read_Chnnls[pos_channel], "v2":self.Read_Chnnls[neg_channel], "v3":no_reads}
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed
+                vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list of strings
+                res = int(vals_str[-1])
+                self.ResetBuffer() # clear the IBM4 buffer after each read            
+                if loud: 
+                    print(read_result)
+                    print(res) 
+                return res
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c4:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+            
+    def DiffReadMultipleBinary(self, pos_channel, neg_channel, no_reads = 10, loud = False):
+        
+        """
+        This method interfaces with the IBM4 to perform a differential read operation.
+        The input channels must be between 0 and 4, and the number of readings to be averaged should be greater than zero. 
+        At some point the number of readings will be too high and will cause a timeout error. This should only happen for numbers 
+        larger than 10000. The output will be an array of integer values.
+    
+        Inputs:
+        pos_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2'
+        neg_channel (type: str) is one of the labels for the analog input channels 'A2', 'A3', 'A4', 'A5', 'D2', accepting that it is not the same as pos_channel    
+        no_reads (type: int) is the num. of readings to be taken at the analog input channel
+        
+        Outputs:
+        vals_int (type: int) numpy array with all differential read values
+        """
+
+        self.FUNC_NAME = ".DiffReadMultiple()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+    
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c2 = True if pos_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c3 = True if neg_channel in self.Read_Chnnls else False # confirm that the positive channel label is correct
+            c4 = True if neg_channel != pos_channel else False # confirm that the positive channel label is correct
+            c5 = True if no_reads > 2 and no_reads < 10000 else False # confirm that no. averages being taken is a sensible value
+        
+            c10 = c1 and c2 and c3 and c4 and c5 # if all conditions are true then write can proceed
+            
+            if c10:
+                read_cmd = 'Diff_BRead%(v1)d:%(v2)d:%(v3)d\r\n'%{"v1":self.Read_Chnnls[pos_channel], "v2":self.Read_Chnnls[neg_channel], "v3":no_reads}
+                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes
+                read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed
+                vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list of strings
+                #vals_flt = [float(x) for x in vals_str] # convert the list of strings to floats, save as a list
+                # only interested in the last no_reads values so read backwards into the vals_str list using list-slice operator
+                vals_int = numpy.int_(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
+                self.ResetBuffer() # clear the IBM4 buffer after each read            
+                if loud: 
+                    print(read_result)
+                    print(vals_int) # print the parsed values                
+                return vals_int # return the relevant numerical values
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel outside range {A0, A1}'
+                if not c4:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\npos_channel cannot be the same as neg_channel'
+                if not c5:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nno_averages outside range [3, 10000]'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+            
+    # methods to initiate multimeter mode
+            
