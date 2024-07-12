@@ -1237,3 +1237,6 @@ class Ser_Iface(object):
         #n_ave = int( input('Enter no. averages: ') )
         diff_res = self.DiffReadMultiple(pos_chn, neg_chn)
         print('Differential Read Value = %(v1)0.3f +/- %(v2)0.3f (V)'%{"v1":diff_res[0], "v2":diff_res[1]})
+        
+    # methods for initiating voltage sweeps
+        
