@@ -641,7 +641,7 @@ def Class_Testing():
         vals = the_dev.DifferentialRead('A3', 'A4', 'Multiple Voltage', Nreads)
         print("Diode Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
         
-    MULTI_READ = True
+    MULTI_READ = False
     
     if MULTI_READ:
         # can compare the timing of each of the different measurement types
@@ -696,7 +696,7 @@ def Class_Testing():
         print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
         print("Measured Voltages: ", val)
         
-    DMM_MODE = False
+    DMM_MODE = True
     
     if DMM_MODE:
         the_dev.MultimeterMode()
