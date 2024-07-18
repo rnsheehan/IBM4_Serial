@@ -1126,30 +1126,31 @@ class Ser_Iface(object):
                 # Start do-while loop to process the multimeter options
                 do = True        
                 while do: 
-                    action = int( input( self.MultimeterPrompt() ) )
+                    action = int( input( self._MultimeterPrompt() ) )
                     if action == -1:
                         print('\nEnd Program\n')
+                        self.ZeroIBM4()
                         do = False
                     elif action == 1:
                         #idn_prompt(instrument_obj)
                         continue
                     elif action == 2:
-                        self.VoltOutputPrompt('A0')
+                        self._VoltOutputPrompt('A0')
                         continue
                     elif action == 3:
-                        self.VoltOutputPrompt('A1')
+                        self._VoltOutputPrompt('A1')
                         continue
                     elif action == 4:
-                        self.PWMPrompt()
+                        self._PWMPrompt()
                         continue
                     elif action == 5:
-                        self.GroundIBM4Prompt()
+                        self._GroundIBM4Prompt()
                         continue
                     elif action == 6:
-                        self.ReadInputsPrompt()
+                        self._ReadInputsPrompt()
                         continue
                     elif action == 7:
-                        self.DiffReadPrompt()
+                        self._DiffReadPrompt()
                         continue
                     else:
                         #action = int(input(prompt)) # don't make this call here, otherwise prompt for input is executed twice

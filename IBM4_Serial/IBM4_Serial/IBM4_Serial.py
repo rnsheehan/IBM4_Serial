@@ -630,7 +630,7 @@ def Class_Testing():
         Nreads = 237
         Rval = 10.0 / 1000.0 # sense resistance in kOhm
         Vset = 1.25
-        the_dev.WriteVoltage('A1',Vset)
+        the_dev.WriteVoltage('A0',Vset)
         the_dev.ResetBuffer()
         time.sleep(1)
         vals = the_dev.DifferentialRead('A2', 'A4', 'Multiple Voltage', Nreads)
@@ -641,7 +641,7 @@ def Class_Testing():
         vals = the_dev.DifferentialRead('A3', 'A4', 'Multiple Voltage', Nreads)
         print("Diode Voltage: %(v1)0.3f +/- %(v2)0.3f (V)"%{"v1":vals[0],"v2":vals[1]})
         
-    MULTI_READ = False
+    MULTI_READ = True
     
     if MULTI_READ:
         # can compare the timing of each of the different measurement types
@@ -656,7 +656,7 @@ def Class_Testing():
         
         Nreads = 501
         Vset = 1.5
-        the_dev.WriteVoltage('A1',Vset)
+        the_dev.WriteVoltage('A0',Vset)
         the_dev.ResetBuffer()
         time.sleep(1)
         
@@ -696,7 +696,7 @@ def Class_Testing():
         print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
         print("Measured Voltages: ", val)
         
-    DMM_MODE = True
+    DMM_MODE = False
     
     if DMM_MODE:
         the_dev.MultimeterMode()
