@@ -1350,7 +1350,10 @@ class Ser_Iface(object):
         voltage_interval describes the voltage sweep space
         """
 
-        # R. Sheehan 30 - 5 - 2024
+        # Notes on syntax for passing a class as an argument
+        # https://stackoverflow.com/questions/4501403/class-as-an-input-in-a-function
+        # https://www.reddit.com/r/learnpython/comments/12fk1we/pass_class_as_argument_to_another_class/?rdt=50057
+        # R. Sheehan 22 - 7 - 2024
 
         self.FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
