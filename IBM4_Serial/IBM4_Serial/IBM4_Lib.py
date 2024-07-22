@@ -68,8 +68,7 @@ import re
 import serial
 import time
 import numpy
-
-MOD_NAME_STR = "IBM4_Lib"
+import Sweep_Interval
 
 # define the class for interfacing to an IBM4
 
@@ -95,8 +94,9 @@ class Ser_Iface(object):
         read_mode = 'AC' =>  IBM4 assumes analog inputs in the range [-8, +8]
         """        
         try:
+            self.MOD_NAME_STR = "IBM4_Lib"
             self.FUNC_NAME = ".Ser_Iface()" # use this in exception handling messages
-            self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+            self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
             # Dictionaries for the Read, Write Channels
             self.Read_Chnnls = {"A2":0, "A3":1, "A4":2, "A5":3, "D2":4}
@@ -164,7 +164,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".ResetBuffer()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:            
             # confirm that the instrument object has been instantiated
@@ -196,7 +196,7 @@ class Ser_Iface(object):
         """
         
         self.FUNC_NAME = ".OpenComms()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             if self.IBM4Port is not None:
@@ -226,7 +226,7 @@ class Ser_Iface(object):
         """
         
         self.FUNC_NAME = ".ZeroIBM4()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             if self.instr_obj.isOpen():
@@ -247,7 +247,7 @@ class Ser_Iface(object):
         """
         
         self.FUNC_NAME = ".IdentifyIBM4()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             if self.instr_obj.isOpen():
@@ -270,7 +270,7 @@ class Ser_Iface(object):
         """
     
         self.FUNC_NAME = self.FUNC_NAME + ".FindIBM4()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
     
         try:
             if sys.platform.startswith('win'):
@@ -330,7 +330,7 @@ class Ser_Iface(object):
         """
         
         self.FUNC_NAME = ".SetMode()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -363,7 +363,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".WriteSingleChnnl()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -400,7 +400,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".WritePWM()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -434,7 +434,7 @@ class Ser_Iface(object):
         # R. Sheehan 9 - 7 - 2024
 
         self.FUNC_NAME = ".ReadVoltage()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -482,7 +482,7 @@ class Ser_Iface(object):
         # R. Sheehan 9 - 7 - 2024
 
         self.FUNC_NAME = ".DifferentialRead()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -539,7 +539,7 @@ class Ser_Iface(object):
         """
         
         self.FUNC_NAME = ".ReadSingleVoltage()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -583,7 +583,7 @@ class Ser_Iface(object):
         """
         
         self.FUNC_NAME = ".ReadSingleBinary()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -661,7 +661,7 @@ class Ser_Iface(object):
         # R. Sheehan 8 - 7 - 2024
 
         self.FUNC_NAME = ".ReadAverageVoltage()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -708,7 +708,7 @@ class Ser_Iface(object):
         """
         
         FUNC_NAME = ".ReadAverageVoltageAllChnnl()" # use this in exception handling messages
-        ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+        ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -754,7 +754,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".ReadMultipleVoltage()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -806,7 +806,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".ReadMultipleBinary()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -858,7 +858,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".DiffReadSingle()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
     
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -912,7 +912,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".DiffReadSingle()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
     
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -971,7 +971,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".DiffReadMultiple()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
     
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -1032,7 +1032,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".DiffReadSingleBinary()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
     
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -1086,7 +1086,7 @@ class Ser_Iface(object):
         """
 
         self.FUNC_NAME = ".DiffReadMultiple()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
     
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
@@ -1139,7 +1139,7 @@ class Ser_Iface(object):
         """        
 
         self.MultimeterMode = ".Multimeter_Mode()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + MOD_NAME_STR + self.FUNC_NAME
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             if self.instr_obj.isOpen():
@@ -1285,8 +1285,8 @@ class Ser_Iface(object):
         # this will make the code much cleaner
         # R. Sheehan 22 - 7 - 2024
 
-        FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
-        ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+        self.FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:       
             c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated
@@ -1339,6 +1339,67 @@ class Ser_Iface(object):
             print(self.ERR_STATEMENT)
             print(e)    
             
+    def SingleChannelSweep(self, output_channel, voltage_interval:Sweep_Interval.SweepSpace, no_averages, loud = False):
+    
+        """
+        Enable the microcontroller to perform a linear sweep of measurements using a single channel
+        start at v_strt, set voltage, read inputs, increment_voltage, return voltage readings at all inputs
+        format the voltage readings after the fact
+    
+        output_channel is the channel being used as a voltage source
+        voltage_interval describes the voltage sweep space
+        """
+
+        # R. Sheehan 30 - 5 - 2024
+
+        self.FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
+
+        try:       
+            c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated
+            c2 = True if output_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
+            c3 = True if voltage_interval.defined # check that the parameters in the interval have been defined correctly
+            c7 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
+            c10 = c1 and c2 and c3 and c7
+        
+            if c10:
+                # Proceed with the single channel linear voltage sweep
+                DELAY = 0.25 # timed delay value in units of seconds
+                voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
+                v_set = voltage_interval.start # initialise the set-voltage
+                # perform the sweep
+                print('Sweeping voltage on Analog Output: ',output_channel)
+                count = 0
+                while v_set < voltage_interval.stop:
+                    step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
+                    self.WriteVoltage(output_channel, v_set) # set the voltage at the analog output channel
+                    time.sleep(DELAY) # Apply a fixed delay
+                    chnnl_values = self.ReadAverageVoltageAllChnnl(no_averages) # read the averaged voltages at all analog input channels
+                    # save the data
+                    step_data = numpy.append(step_data, v_set) # store the set-voltage value for this step
+                    step_data = numpy.append(step_data, chnnl_values) # store the  measured voltage values from all channels for this step
+                    # store the  set-voltage and the measured voltage values from all channels for this step
+                    # use append on the first step to initialise the voltage_data array
+                    # use vstack on subsequent steps to build up the 2D array of data
+                    voltage_data = numpy.append(voltage_data, step_data) if count == 0 else numpy.vstack([voltage_data, step_data])
+                    v_set = v_set + voltage_interval.delta # increment the set-voltage
+                    count = count + 1 if count == 0 else count # only need to increment count once to build up the array
+                print('Sweep complete')
+                return voltage_data
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
+                if not c2:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\noutput_channel outside range {A0, A1}'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nvoltage sweep bounds not defined'
+                if not c7:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nn_averages not defined correctly'
+                raise Exception        
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)    
+            
     def TwoChannelSweep(self, output_channel, v_strt, v_end, no_steps, no_averages, loud = False):
     
         """
@@ -1355,8 +1416,8 @@ class Ser_Iface(object):
         
         # R. Sheehan 22 - 7 - 2024
 
-        FUNC_NAME = ".TwoChannelSweep()" # use this in exception handling messages
-        ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+        self.FUNC_NAME = ".TwoChannelSweep()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:       
             c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated

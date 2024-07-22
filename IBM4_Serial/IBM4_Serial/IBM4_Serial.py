@@ -24,6 +24,7 @@ import time
 import numpy
 
 import IBM4_Library_VISA # IBM4 interface based on VISA, 
+import Sweep_Interval
 import IBM4_Lib # IBM4 interface based on Serial
 
 MOD_NAME_STR = "IBM4_Serial"
@@ -576,6 +577,8 @@ def Class_Testing():
     the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
     #the_dev = IBM4_Lib.Ser_Iface('COM3') # this version should connect to a named IBM4
     
+    
+    
     #the_dev.FindIBM4()
     #the_dev.open_comms()
     
@@ -696,10 +699,18 @@ def Class_Testing():
         print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
         print("Measured Voltages: ", val)
         
-    DMM_MODE = True
+    DMM_MODE = False
     
     if DMM_MODE:
         the_dev.MultimeterMode()
+        
+    LINEAR_SWEEP = False
+
+    if LINEAR_SWEEP:
+        no_steps = 10
+        v_start = 0.0
+        v_end = 3.3
+        the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
 
     del the_dev # destructor for the IBM4 object, closes comms
 
