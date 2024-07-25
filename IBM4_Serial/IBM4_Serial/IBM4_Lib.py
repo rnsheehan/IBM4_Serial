@@ -1264,17 +1264,18 @@ class Ser_Iface(object):
         print('Differential Read Value = %(v1)0.3f +/- %(v2)0.3f (V)'%{"v1":diff_res[0], "v2":diff_res[1]})
         
     # methods for initiating voltage sweeps
-    def SingleChannelSweep(self, output_channel, v_strt, v_end, no_steps, no_averages, loud = False):
+    def SingleChannelSweep(self, swp_channel, v_strt, v_end, no_steps, v_fixed = 0.0, no_averages = 10, loud = False):
     
         """
         Enable the microcontroller to perform a linear sweep of measurements using a single channel
         start at v_strt, set voltage, read inputs, increment_voltage, return voltage readings at all inputs
         format the voltage readings after the fact
     
-        output_channel is the channel being used as a voltage source
+        swp_channel is the channel being used as a voltage source
         v_strt is the initial voltage
         v_end is the final voltage
         no_steps is the number of voltage steps
+        v_fixed is the constant voltage to be output by the channel that is NOT being swept
         caveat emptor no_steps is constrained by fact that smallest voltage increment is 0.1V
         """
 
@@ -1290,26 +1291,29 @@ class Ser_Iface(object):
 
         try:       
             c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated
-            c2 = True if output_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
-            c3 = True if v_strt >= 0.0 and v_strt < v_end else False # confirm that the voltage sweep bounds are in range
+            c2 = True if swp_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
+            c3 = True if v_strt >= self.VMIN and v_strt < v_end else False # confirm that the voltage sweep bounds are in range
             c4 = True if v_end > v_strt and v_end < self.VMAX else False # confirm that the voltage sweep bounds are in range
             c5 = True if (v_end - v_strt) > self.DELTA_VMIN else False # confirm that the voltage sweep bounds are in range
+            c8 = True if v_fixed >= self.VMIN and v_fixed < self.VMAX else False # confirm that the fixed voltage is in range
             c6 = True if no_steps > 2 else False # confirm that the no. of steps is appropriate
             c7 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
-            c10 = c1 and c2 and c3 and c4 and c5 and c6 and c7
+            c10 = c1 and c2 and c3 and c4 and c5 and c6 and c7 and c8
         
             if c10:
+                # Set the voltage on the channel that is NOT sweeping
+                
                 # Proceed with the single channel linear voltage sweep
                 DELAY = 0.25 # timed delay value in units of seconds
                 voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
                 delta_v = max( (v_end - v_strt) / float(no_steps - 1), self.DELTA_VMIN) # Determine the sweep voltage increment, this is bounded below by delta_v_min
                 v_set = v_strt # initialise the set-voltage
                 # perform the sweep
-                print('Sweeping voltage on Analog Output: ',output_channel)
+                print('Sweeping voltage on Analog Output: ',swp_channel)
                 count = 0
                 while v_set < v_end:
                     step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
-                    self.WriteVoltage(output_channel, v_set) # set the voltage at the analog output channel
+                    self.WriteVoltage(swp_channel, v_set) # set the voltage at the analog output channel
                     time.sleep(DELAY) # Apply a fixed delay
                     chnnl_values = self.ReadAverageVoltageAllChnnl(no_averages) # read the averaged voltages at all analog input channels
                     # save the data
@@ -1322,6 +1326,7 @@ class Ser_Iface(object):
                     v_set = v_set + delta_v # increment the set-voltage
                     count = count + 1 if count == 0 else count # only need to increment count once to build up the array
                 print('Sweep complete')
+                self.ZeroIBM4() # ground the analog outputs
                 return voltage_data
             else:
                 if not c1:
@@ -1334,20 +1339,23 @@ class Ser_Iface(object):
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nn_steps not defined correctly'
                 if not c7:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nn_averages not defined correctly'
+                if not c8:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nv_fixed not in the correct range'
                 raise Exception        
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)    
             
-    def SingleChannelSweep(self, output_channel, voltage_interval:Sweep_Interval.SweepSpace, no_averages, loud = False):
+    def SingleChannelSweep(self, swp_channel, voltage_interval:Sweep_Interval.SweepSpace, v_fixed = 0.0, no_averages = 10, loud = False):
     
         """
         Enable the microcontroller to perform a linear sweep of measurements using a single channel
         start at v_strt, set voltage, read inputs, increment_voltage, return voltage readings at all inputs
         format the voltage readings after the fact
     
-        output_channel is the channel being used as a voltage source
+        swp_channel is the channel being used as a voltage source
         voltage_interval describes the voltage sweep space
+        v_fixed is the constant voltage to be output by the channel that is NOT being swept
         """
 
         # Notes on syntax for passing a class as an argument
@@ -1360,22 +1368,25 @@ class Ser_Iface(object):
 
         try:       
             c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated
-            c2 = True if output_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
-            c3 = True if voltage_interval.defined # check that the parameters in the interval have been defined correctly
+            c2 = True if swp_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
+            c3 = voltage_interval.defined # check that the parameters in the interval have been defined correctly
             c7 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
-            c10 = c1 and c2 and c3 and c7
+            c8 = True if v_fixed >= self.VMIN and v_fixed < self.VMAX else False # confirm that the fixed voltage is in range
+            c10 = c1 and c2 and c3 and c7 and c8
         
             if c10:
+                # Set the voltage on the channel that is NOT sweeping
+                
                 # Proceed with the single channel linear voltage sweep
                 DELAY = 0.25 # timed delay value in units of seconds
                 voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
                 v_set = voltage_interval.start # initialise the set-voltage
                 # perform the sweep
-                print('Sweeping voltage on Analog Output: ',output_channel)
+                print('Sweeping voltage on Analog Output: ',swp_channel)
                 count = 0
                 while v_set < voltage_interval.stop:
                     step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
-                    self.WriteVoltage(output_channel, v_set) # set the voltage at the analog output channel
+                    self.WriteVoltage(swp_channel, v_set) # set the voltage at the analog output channel
                     time.sleep(DELAY) # Apply a fixed delay
                     chnnl_values = self.ReadAverageVoltageAllChnnl(no_averages) # read the averaged voltages at all analog input channels
                     # save the data
@@ -1388,6 +1399,7 @@ class Ser_Iface(object):
                     v_set = v_set + voltage_interval.delta # increment the set-voltage
                     count = count + 1 if count == 0 else count # only need to increment count once to build up the array
                 print('Sweep complete')
+                self.ZeroIBM4() # ground the analog outputs
                 return voltage_data
             else:
                 if not c1:
@@ -1398,76 +1410,8 @@ class Ser_Iface(object):
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nvoltage sweep bounds not defined'
                 if not c7:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nn_averages not defined correctly'
-                raise Exception        
-        except Exception as e:
-            print(self.ERR_STATEMENT)
-            print(e)    
-            
-    def TwoChannelSweep(self, output_channel, v_strt, v_end, no_steps, no_averages, loud = False):
-    
-        """
-        Enable the microcontroller to perform a linear sweep of measurements using both channels
-        start at v_strt, set voltage, read inputs, increment_voltage, return voltage readings at all inputs
-        format the voltage readings after the fact
-    
-        output_channel is the channel being used as a voltage source
-        v_strt is the initial voltage
-        v_end is the final voltage
-        no_steps is the number of voltage steps
-        caveat emptor no_steps is constrained by fact that smallest voltage increment is 0.1V
-        """
-        
-        # R. Sheehan 22 - 7 - 2024
-
-        self.FUNC_NAME = ".TwoChannelSweep()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
-
-        try:       
-            c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated
-            c2 = True if output_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
-            c3 = True if v_strt >= 0.0 and v_strt < v_end else False # confirm that the voltage sweep bounds are in range
-            c4 = True if v_end > v_strt and v_end < self.VMAX else False # confirm that the voltage sweep bounds are in range
-            c5 = True if (v_end - v_strt) > self.DELTA_VMIN else False # confirm that the voltage sweep bounds are in range
-            c6 = True if no_steps > 2 else False # confirm that the no. of steps is appropriate
-            c7 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
-            c10 = c1 and c2 and c3 and c4 and c5 and c6 and c7
-        
-            if c10:
-                # Proceed with the single channel linear voltage sweep
-                DELAY = 0.25 # timed delay value in units of seconds
-                voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
-                delta_v = max( (v_end - v_strt) / float(no_steps - 1), self.DELTA_VMIN) # Determine the sweep voltage increment, this is bounded below by delta_v_min
-                v_set = v_strt # initialise the set-voltage
-                # perform the sweep
-                print('Sweeping voltage on Analog Output: ',output_channel)
-                count = 0
-                while v_set < v_end:
-                    step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
-                    self.WriteVoltage(output_channel, v_set) # set the voltage at the analog output channel
-                    time.sleep(DELAY) # Apply a fixed delay
-                    chnnl_values = self.ReadAverageVoltageAllChnnl(no_averages) # read the averaged voltages at all analog input channels
-                    # save the data
-                    step_data = numpy.append(step_data, v_set) # store the set-voltage value for this step
-                    step_data = numpy.append(step_data, chnnl_values) # store the  measured voltage values from all channels for this step
-                    # store the  set-voltage and the measured voltage values from all channels for this step
-                    # use append on the first step to initialise the voltage_data array
-                    # use vstack on subsequent steps to build up the 2D array of data
-                    voltage_data = numpy.append(voltage_data, step_data) if count == 0 else numpy.vstack([voltage_data, step_data])
-                    v_set = v_set + delta_v # increment the set-voltage
-                    count = count + 1 if count == 0 else count # only need to increment count once to build up the array
-                print('Sweep complete')
-                return voltage_data
-            else:
-                if not c1:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
-                if not c2:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\noutput_channel outside range {A0, A1}'
-                if not c3 or not c4 or not c5:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nvoltage sweep bounds not appropriate for range [0.0, 3.3)'
-                if not c6:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nn_steps not defined correctly'
-                if not c7:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nn_averages not defined correctly'
+                if not c8:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nv_fixed not in the correct range'
                 raise Exception        
         except Exception as e:
             print(self.ERR_STATEMENT)
