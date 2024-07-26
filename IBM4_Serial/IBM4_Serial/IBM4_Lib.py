@@ -253,6 +253,7 @@ class Ser_Iface(object):
 
         try:
             if self.instr_obj.isOpen():
+                self.ResetBuffer() # reset buffer between write, read cmd pairs
                 self.instr_obj.write(b'*IDN\r\n')
                 response = self.instr_obj.read_until('\n',size=None)
                 Code=response.rsplit(b'\r\n')
@@ -1191,8 +1192,9 @@ class Ser_Iface(object):
         text processing for the multimeter mode prompt
         """
         
-        start = 'Options for IBM4 Multimeter Mode:\n';
+        start = '\nOptions for IBM4 Multimeter Mode:\n';
         message = '\nInput Value to Indicate Option You Require: ';
+        newline = '\n'
 
         option1 = 'Identify Device'; # Query *IDN
         option2 = 'Set Analog Output A0'; # Set voltage at A0
@@ -1209,12 +1211,19 @@ class Ser_Iface(object):
     
         width = max(len(item) for item in theOptions) + 5
 
-        print(start)
+        # print(start)
+        # for i in range(0, len(theOptions), 1):
+        #     print(theOptions[i].ljust(width),theValues[i])
+        # print(message)
+        
+        prompt = start
         for i in range(0, len(theOptions), 1):
-            print(theOptions[i].ljust(width),theValues[i])
-        print(message)
+            prompt = prompt + theOptions[i].ljust(width) + theValues[i] + newline
+        prompt = prompt + message
+        
+        return prompt
 
-    def IDNPprompt(self):
+    def IDNPrompt(self):
         """
         perform the *IDN action
         """
@@ -1223,7 +1232,7 @@ class Ser_Iface(object):
         ainm = self.IdentifyIBM4()
         
         if ainm is not None:
-            print('Connected to:',ainm)
+            print('\nConnected to:',ainm)
 
     def VoltOutputPrompt(self, output_channel):
         """

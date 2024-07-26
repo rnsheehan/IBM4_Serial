@@ -577,8 +577,6 @@ def Class_Testing():
     the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
     #the_dev = IBM4_Lib.Ser_Iface('COM3') # this version should connect to a named IBM4
     
-    
-    
     #the_dev.FindIBM4()
     #the_dev.open_comms()
     
@@ -699,7 +697,7 @@ def Class_Testing():
         print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
         print("Measured Voltages: ", val)
         
-    DMM_MODE = False
+    DMM_MODE = True
     
     if DMM_MODE:
         the_dev.MultimeterMode()
@@ -777,8 +775,8 @@ if __name__ == '__main__':
     
     #FindIBM4()
     
-    #Class_Testing()
+    Class_Testing()
     
     #action = input(MultimeterPrompt())
     
-    MultimeterPrompt()
+    #MultimeterPrompt()
