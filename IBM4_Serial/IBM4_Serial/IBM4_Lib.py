@@ -1264,7 +1264,7 @@ class Ser_Iface(object):
         print('Differential Read Value = %(v1)0.3f +/- %(v2)0.3f (V)'%{"v1":diff_res[0], "v2":diff_res[1]})
         
     # methods for initiating voltage sweeps
-    def SingleChannelSweep(self, swp_channel, v_strt, v_end, no_steps, v_fixed = 0.0, no_averages = 10, loud = False):
+    def SingleChannelSweep(self, swp_channel, v_strt, v_end, no_steps, v_fixed = 0.0, no_averages = 10):
     
         """
         Enable the microcontroller to perform a linear sweep of measurements using a single channel
@@ -1289,7 +1289,7 @@ class Ser_Iface(object):
         self.FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
-        try:       
+        try:
             c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated
             c2 = True if swp_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
             c3 = True if v_strt >= self.VMIN and v_strt < v_end else False # confirm that the voltage sweep bounds are in range
@@ -1302,7 +1302,8 @@ class Ser_Iface(object):
         
             if c10:
                 # Set the voltage on the channel that is NOT sweeping
-                
+                fixed_channel = 'A1' if swp_channel == 'A0' else 'A0'
+                self.WriteVoltage(fixed_channel, v_fixed)
                 # Proceed with the single channel linear voltage sweep
                 DELAY = 0.25 # timed delay value in units of seconds
                 voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
@@ -1346,7 +1347,7 @@ class Ser_Iface(object):
             print(self.ERR_STATEMENT)
             print(e)    
             
-    def SingleChannelSweep(self, swp_channel, voltage_interval:Sweep_Interval.SweepSpace, v_fixed = 0.0, no_averages = 10, loud = False):
+    def SingleChannelSweep(self, swp_channel, voltage_interval:Sweep_Interval.SweepSpace, v_fixed = 0.0, no_averages = 10):
     
         """
         Enable the microcontroller to perform a linear sweep of measurements using a single channel
@@ -1376,7 +1377,8 @@ class Ser_Iface(object):
         
             if c10:
                 # Set the voltage on the channel that is NOT sweeping
-                
+                fixed_channel = 'A1' if swp_channel == 'A0' else 'A0'
+                self.WriteVoltage(fixed_channel, v_fixed)
                 # Proceed with the single channel linear voltage sweep
                 DELAY = 0.25 # timed delay value in units of seconds
                 voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
