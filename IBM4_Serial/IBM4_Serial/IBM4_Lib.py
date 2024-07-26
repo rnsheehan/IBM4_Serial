@@ -57,6 +57,8 @@ R. Sheehan 11 - 6 - 2024
 # https://www.geeksforgeeks.org/python-output-formatting/
 # https://realpython.com/python-formatted-output/
 # https://python-course.eu/python-tutorial/formatted-output.php
+# https://stackoverflow.com/questions/848537/writing-parsing-text-file-with-fixed-width-lines
+# https://stackoverflow.com/questions/9989334/create-nice-column-output-in-python # use this one to format multimeter mode prompt
 # R. Sheehan 10 - 7 - 2024
 
 # import required libraries
@@ -1189,21 +1191,28 @@ class Ser_Iface(object):
         text processing for the multimeter mode prompt
         """
         
-        # Define options for menu
         start = 'Options for IBM4 Multimeter Mode:\n';
-        option1 = 'Identify Device = 1\n'; # Query *IDN
-        option2 = 'Set Analog Output A0 = 2\n'; # Set voltage at A0
-        option3 = 'Set Analog Output A1 = 3\n'; # Set voltage at A1
-        option4 = 'Set PWM = 4\n'; # Set PWM 
-        option5 = 'Re-Set Analog Outputs = 5\n'; # Gnd all outputs
-        option6 = 'Read All Analog Inputs = 6\n'; # Read voltages at each of the Analog inputs
-        option7 = 'Perform Differential Measurement = 7\n'; # Perform differential voltage measurement
-        option8 = 'End program Input = -1\n';
-        message = 'Input: ';
-        newline = '\n';
-        prompt = newline + start + option1 + option2 + option3 + option4 + option5 + option6 + option7 + option8 + message
+        message = '\nInput Value to Indicate Option You Require: ';
+
+        option1 = 'Identify Device'; # Query *IDN
+        option2 = 'Set Analog Output A0'; # Set voltage at A0
+        option3 = 'Set Analog Output A1'; # Set voltage at A1
+        option4 = 'Set PWM Output'; # Set PWM 
+        option5 = 'Ground All Analog Outputs'; # Gnd all outputs
+        option6 = 'Read All Analog Inputs'; # Read voltages at each of the Analog inputs
+        option7 = 'Perform Differential Measurement'; # Perform differential voltage measurement
+        option8 = 'End Multimeter Mode'; # End multimeter mode
     
-        return prompt
+        theOptions = [option1, option2, option3, option4, option5, option6, option7, option8]
+    
+        theValues = ['1', '2', '3', '4', '5', '6', '7', '-1']
+    
+        width = max(len(item) for item in theOptions) + 5
+
+        print(start)
+        for i in range(0, len(theOptions), 1):
+            print(theOptions[i].ljust(width),theValues[i])
+        print(message)
 
     def IDNPprompt(self):
         """

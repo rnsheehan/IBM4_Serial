@@ -713,7 +713,40 @@ def Class_Testing():
         the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
 
     del the_dev # destructor for the IBM4 object, closes comms
+    
+def MultimeterPrompt():
+    """
+    text processing for the multimeter mode prompt
+    """
+        
+    # Define options for menu
+    start = 'Options for IBM4 Multimeter Mode:\n';
+    message = '\nInput Integer to Indicate Chosen Option: ';
 
+    option1 = 'Identify Device'; # Query *IDN
+    option2 = 'Set Analog Output A0'; # Set voltage at A0
+    option3 = 'Set Analog Output A1'; # Set voltage at A1
+    option4 = 'Set PWM Output'; # Set PWM 
+    option5 = 'Ground All Analog Outputs'; # Gnd all outputs
+    option6 = 'Read All Analog Inputs'; # Read voltages at each of the Analog inputs
+    option7 = 'Perform Differential Measurement'; # Perform differential voltage measurement
+    option8 = 'End Multimeter Mode'; # End multimeter mode
+    
+    theOptions = [option1, option2, option3, option4, option5, option6, option7, option8]
+    
+    theValues = ['1', '2', '3', '4', '5', '6', '7', '-1']
+    
+    # OptionDict = dict( zip( theOptions, theValues ) )
+    # for k, v in OptionDict.items():
+    #     print(k, v)
+    
+    width = max(len(item) for item in theOptions) + 5
+
+    print(start)
+    for i in range(0, len(theOptions), 1):
+        print(theOptions[i].ljust(width),theValues[i])
+    print(message)
+    
 def main():
     pass
 
@@ -744,4 +777,8 @@ if __name__ == '__main__':
     
     #FindIBM4()
     
-    Class_Testing()
+    #Class_Testing()
+    
+    #action = input(MultimeterPrompt())
+    
+    MultimeterPrompt()
