@@ -709,6 +709,8 @@ def Class_Testing():
         v_start = 0.0
         v_end = 3.3
         the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
+        
+        the_dev.SingleChannelSweep('A1', the_interval) # use channel A1 to sweep over the voltage interval
 
     del the_dev # destructor for the IBM4 object, closes comms
     
