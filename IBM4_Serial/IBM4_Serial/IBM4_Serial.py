@@ -23,7 +23,7 @@ import pyvisa
 import time
 import numpy
 
-import IBM4_Library_VISA # IBM4 interface based on VISA, 
+#import IBM4_Library_VISA # IBM4 interface based on VISA, 
 import Sweep_Interval
 import IBM4_Lib # IBM4 interface based on Serial
 
@@ -496,77 +496,77 @@ def VISA_Attempt_2(voltage):
         print(ERR_STATEMENT)
         print(e)
 
-def IBM4_Lib_Hacking():
+# def IBM4_Lib_Hacking():
     
-    # Testing the IBM4 library
-    # R. Sheehan 27 - 5 - 2024
+#     # Testing the IBM4 library
+#     # R. Sheehan 27 - 5 - 2024
     
-    # Some issues around opening the resource that need to be addressed
-    # Comms works no problem when first opened with LabVIEW open.vi
-    # Issue with the VISA setup of the device. 
-    # What's going on? 
-    # R. Sheehan 28 - 5 - 2024
-    # Do you need to open and close it as a serial device first, then open it as a VISA resource?
+#     # Some issues around opening the resource that need to be addressed
+#     # Comms works no problem when first opened with LabVIEW open.vi
+#     # Issue with the VISA setup of the device. 
+#     # What's going on? 
+#     # R. Sheehan 28 - 5 - 2024
+#     # Do you need to open and close it as a serial device first, then open it as a VISA resource?
     
-    #the_instr = IBM4_Library_VISA.Find()
+#     #the_instr = IBM4_Library_VISA.Find()
     
-    dev_addr = 'COM3'
-    the_instr = IBM4_Library_VISA.Open_Comms(dev_addr)
+#     dev_addr = 'COM3'
+#     the_instr = IBM4_Library_VISA.Open_Comms(dev_addr)
     
-    IBM4_Library_VISA.Write_Single_Chnnl(the_instr, 'A1', 1.5)
+#     IBM4_Library_VISA.Write_Single_Chnnl(the_instr, 'A1', 1.5)
     
-    #IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A2', 10, True)
-    #IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A3', 10, True)
-    diff_res = IBM4_Library_VISA.DiffReadMultiple(the_instr, 'A2', 'A3', 10, True)
-    print('diff-read = %(v1)0.3f +/- %(v2)0.3f'%{"v1":diff_res[0], "v2":diff_res[1]})
-    # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A4', 10)
-    # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A5', 10)
-    # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'D2', 10)
+#     #IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A2', 10, True)
+#     #IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A3', 10, True)
+#     diff_res = IBM4_Library_VISA.DiffReadMultiple(the_instr, 'A2', 'A3', 10, True)
+#     print('diff-read = %(v1)0.3f +/- %(v2)0.3f'%{"v1":diff_res[0], "v2":diff_res[1]})
+#     # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A4', 10)
+#     # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'A5', 10)
+#     # IBM4_Library_VISA.Read_Single_Chnnl(the_instr, 'D2', 10)
     
-    #IBM4_Library_VISA.Read_All_Chnnl(the_instr, 20)
+#     #IBM4_Library_VISA.Read_All_Chnnl(the_instr, 20)
 
-    IBM4_Library_VISA.Close_Comms(the_instr)
+#     IBM4_Library_VISA.Close_Comms(the_instr)
     
-def Sweep_Test():
+# def Sweep_Test():
     
-    # Test the linear voltage sweep
-    # R. Sheehan 30 - 5 - 2024
+#     # Test the linear voltage sweep
+#     # R. Sheehan 30 - 5 - 2024
     
-    the_instr = IBM4_Library_VISA.Find()
+#     the_instr = IBM4_Library_VISA.Find()
 
-    v_start = 0.0
-    v_end = 3.0
-    n_steps = 5
-    n_avg = 5
-    the_data = IBM4_Library_VISA.Linear_Sweep(the_instr, 'A1', v_start, v_end, n_steps, n_avg)
+#     v_start = 0.0
+#     v_end = 3.0
+#     n_steps = 5
+#     n_avg = 5
+#     the_data = IBM4_Library_VISA.Linear_Sweep(the_instr, 'A1', v_start, v_end, n_steps, n_avg)
     
-    for i in range(0, len(the_data), 1):
-        print(the_data[i])
-    print("")
+#     for i in range(0, len(the_data), 1):
+#         print(the_data[i])
+#     print("")
         
-    # An example of how to process the data for the diode measurement
-    print('Sample Processing for Diode Measurement')
-    print('Vset: ',the_data[:,0]) # v-set
-    print('Vset A2-Gnd', the_data[:,1]-the_data[:,3]) # v-set-measured by A2
-    print('Vsense A2-A3: ', (the_data[:,1]-the_data[:,2])) # v-sense A2 - A3
-    print('Isense A2-A3/Rsense: ', (the_data[:,1]-the_data[:,2])/(10.0/1000.0)) # I-sense A2 - A3 / Rsense
-    print('Vdiode A3-Gnd: ', the_data[:,2]-the_data[:,3]) # v-diode A3
-    print('Gnd A4: ', the_data[:,3]) # v-low gnd at A4
-    print('Gnd A5: ', the_data[:,4]) # v-low gnd at A5
-    print('Gnd D2: ', the_data[:,5]) # v-low gnd at D2
+#     # An example of how to process the data for the diode measurement
+#     print('Sample Processing for Diode Measurement')
+#     print('Vset: ',the_data[:,0]) # v-set
+#     print('Vset A2-Gnd', the_data[:,1]-the_data[:,3]) # v-set-measured by A2
+#     print('Vsense A2-A3: ', (the_data[:,1]-the_data[:,2])) # v-sense A2 - A3
+#     print('Isense A2-A3/Rsense: ', (the_data[:,1]-the_data[:,2])/(10.0/1000.0)) # I-sense A2 - A3 / Rsense
+#     print('Vdiode A3-Gnd: ', the_data[:,2]-the_data[:,3]) # v-diode A3
+#     print('Gnd A4: ', the_data[:,3]) # v-low gnd at A4
+#     print('Gnd A5: ', the_data[:,4]) # v-low gnd at A5
+#     print('Gnd D2: ', the_data[:,5]) # v-low gnd at D2
     
-    IBM4_Library_VISA.Close_Comms(the_instr)
+#     IBM4_Library_VISA.Close_Comms(the_instr)
     
-def Multimeter_Test():
-    # Test the multimeter mode option
-    # R. Sheehan 31 - 5 - 2024
+# def Multimeter_Test():
+#     # Test the multimeter mode option
+#     # R. Sheehan 31 - 5 - 2024
     
-    #the_instr = IBM4_Library_VISA.Find()
-    the_instr = IBM4_Library_VISA.Open_Comms('COM3')
+#     #the_instr = IBM4_Library_VISA.Find()
+#     the_instr = IBM4_Library_VISA.Open_Comms('COM3')
     
-    IBM4_Library_VISA.Multimeter_Mode(the_instr)
+#     IBM4_Library_VISA.Multimeter_Mode(the_instr)
 
-    IBM4_Library_VISA.Close_Comms(the_instr)
+#     IBM4_Library_VISA.Close_Comms(the_instr)
     
 def Class_Testing():
     

@@ -1,7 +1,7 @@
 """
 Python library for interacting with the IBM4 using Serial
 Assumes that the IBM4 is configured with the correct UCC circuit python source code
-This module replicates the existing code that was written for LabmethodEW by Frank Peters
+This module replicates the existing code that was written for LabVIEW by Frank Peters
 R. Sheehan 11 - 6 - 2024
 """
 
@@ -100,9 +100,10 @@ class Ser_Iface(object):
             self.FUNC_NAME = ".Ser_Iface()" # use this in exception handling messages
             self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
-            # Dictionaries for the Read, Write Channels
+            # Dictionaries for the Read, Write, PWM Channels
             self.Read_Chnnls = {"A2":0, "A3":1, "A4":2, "A5":3, "D2":4}
             self.Write_Chnnls = {"A0":0, "A1":1}
+            self.PWM_Chnnls = {"D5":5, "D7":7, "D9":9, "D10":10, "D11":11, "D12":12, "D13":13}
             
             # Dictionary for the Read Mode
             self.Read_Modes = {"DC":0, "AC":1}
@@ -232,9 +233,16 @@ class Ser_Iface(object):
 
         try:
             if self.instr_obj.isOpen():
+                 # Set all analog outputs to GND
                 self.instr_obj.write(b'a0\r\n')
                 self.instr_obj.write(b'b0\r\n')
-                self.instr_obj.write(b'PWM9:0\r\n')
+                #self.instr_obj.write(b'PWM9:0\r\n')
+                # Set all PWM outputs to GND
+                # PWM pins 5, 7, 9, 10, 11, 12, 13                
+                for k, v in self.PWM_Chnnls.items():
+                    PWM_cmd = 'PWM%(v1)d:0\r\n'%{"v1":v}
+                    self.instr_obj.write( str.encode( PWM_cmd ) )
+                #self.ResetBuffer() # reset buffer
             else:
                 # Do nothing, no link to IBM4 established
                 pass
@@ -343,6 +351,7 @@ class Ser_Iface(object):
             if c10:
                 write_cmd = 'Mode%(v1)d\r\n'%{"v1":self.Read_Modes[read_mode]}
                 self.instr_obj.write( str.encode(write_cmd) ) # when using serial str must be encoded as bytes
+                self.ResetBuffer() # reset buffer between write, read cmd pairs
             else:
                 if not c1:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
@@ -407,12 +416,12 @@ class Ser_Iface(object):
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
-            c3 = True if percentage >= 0 and percentage < 101 else False # confirm that no. averages being taken is a sensible value
+            c3 = True if percentage >= 0 and percentage < 101 else False # confirm that PWM percentage is a sensible value
         
             c10 = c1 and c3 # if all conditions are true then write can proceed
             if c10:
-                output_channel = 9 # when using the IBM4 enhancement board the PWM is fixed to D9
-                write_cmd = 'PWM%(v1)d:%(v2)d'%{"v1":output_channel, "v2":percentage}
+                output_channel = self.PWM_Chnnls["D9"] # when using the IBM4 enhancement board the PWM is fixed to D9
+                write_cmd = 'PWM%(v1)d:%(v2)d\r\n'%{"v1":output_channel, "v2":percentage}
                 self.instr_obj.write( str.encode(write_cmd) ) # when using serial str must be encoded as bytes
                 #self.ResetBuffer() # reset buffer between write, read cmd pairs
             else:
@@ -1245,7 +1254,7 @@ class Ser_Iface(object):
     
     def GroundIBM4Prompt(self):
         """
-        zero both analog output channels
+        zero all output channels
         """
         
         print('\nGround Analog Outputs\n')
