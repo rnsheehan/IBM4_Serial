@@ -2,7 +2,6 @@
 Python library for interacting with the IBM4 using Serial
 Assumes that the IBM4 is configured with the correct UCC circuit python source code
 This module replicates the existing code that was written for LabVIEW by Frank Peters
-
 R. Sheehan 11 - 6 - 2024
 """
 
@@ -436,14 +435,10 @@ class Ser_Iface(object):
             print(e)
     
     # methods for obtaining data from the IBM4
-    def ReadVoltage(self, input_channel, read_type = 'Single Voltage', no_reads = 10):
+    def ReadVoltage(self, input_channel, read_type = 'Single Voltage', no_reads = 10, loud = False):
         
         """
         Method for accessing the various types of Voltage Readings that are available
-
-        the user must be careful when using overloaded methods
-        python allows for different return types and different numbers of returned elements
-        what is not forbidden is permitted and exploited
         """
 
         # This method is the equivalent of the polymorphic VI implementation of Read in LabVIEW
@@ -488,14 +483,10 @@ class Ser_Iface(object):
             print(self.ERR_STATEMENT)
             print(e)    
             
-    def DifferentialRead(self, pos_channel, neg_channel, read_type = 'Single Voltage', no_reads = 10):
+    def DifferentialRead(self, pos_channel, neg_channel, read_type = 'Single Voltage', no_reads = 10, loud = False):
         
         """
         Method for accessing the various types of Differential Voltage Readings that are available
-
-        the user must be careful when using overloaded methods
-        python allows for different return types and different numbers of returned elements
-        what is not forbidden is permitted and exploited
         """
 
         # This method is the equivalent of the polymorphic VI implementation of DRead in LabVIEW
@@ -1312,10 +1303,7 @@ class Ser_Iface(object):
         v_end is the final voltage
         no_steps is the number of voltage steps
         v_fixed is the constant voltage to be output by the channel that is NOT being swept
-        caveat emptor no_steps is constrained by fact that smallest voltage increment is 0.01V
-
-        Output is a numpy array of the form
-        [v_set, A2, A3, A4, A5, D2]
+        caveat emptor no_steps is constrained by fact that smallest voltage increment is 0.1V
         """
 
         # R. Sheehan 30 - 5 - 2024
@@ -1396,27 +1384,12 @@ class Ser_Iface(object):
         swp_channel is the channel being used as a voltage source
         voltage_interval describes the voltage sweep space
         v_fixed is the constant voltage to be output by the channel that is NOT being swept
-        caveat emptor no_steps is constrained by fact that smallest voltage increment is 0.01V
-
-        Output is a numpy array of the form
-        [v_set, A2, A3, A4, A5, D2]
         """
 
         # Notes on syntax for passing a class as an argument
         # https://stackoverflow.com/questions/4501403/class-as-an-input-in-a-function
         # https://www.reddit.com/r/learnpython/comments/12fk1we/pass_class_as_argument_to_another_class/?rdt=50057
         # R. Sheehan 22 - 7 - 2024
-
-        # this version makes use of the Sweep_Interval object
-        # the thinking behind this is that it would make it easier to write a two-channel sweep, e.g. BJT characterisation
-        # you could write a method that could take two SweepInterval objects as inputs to manage
-        # the sweep paramters, it would be cleaner than having 6 parameters which you would otherwise need
-        # the two channel sweep would then be a nested loop; outer loop over v_fixed, inner loop assuming constant v_fixed
-        # It would be easy to implement, the issue is that the data handling becomes a bit of pain
-        # You'd end up with an unwieldy array that may be difficult for people to comprehend
-        # Output array would look something like [v_set, A21, A31, A41, A51, D21, A22, A32, A42, A52, D22, ..., A2n, A3n, A4n, A5n, D2n]
-        # Might not be too bad if I wrote another method to help the user unpack the A2x, A3x, A4x, A5x, D2x readings
-        # R. Sheehan 23 - 7 - 2024
 
         self.FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
