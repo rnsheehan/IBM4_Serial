@@ -5,8 +5,7 @@
     <ProjectGuid>a9d69096-a78a-4744-9fdd-79ac0aaa021e</ProjectGuid>
     <ProjectHome>.</ProjectHome>
     <StartupFile>IBM4_Serial.py</StartupFile>
-    <SearchPath>
-    </SearchPath>
+    <SearchPath>..\..\..\Common;..\..\..\Plotting</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>IBM4_Serial</Name>

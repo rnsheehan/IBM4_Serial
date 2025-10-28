@@ -22,6 +22,8 @@ import serial
 import pyvisa
 import time
 import numpy
+import Common
+import Plotting
 
 #import IBM4_Library_VISA # IBM4 interface based on VISA, 
 import Sweep_Interval
@@ -764,7 +766,7 @@ def Calibrate_PWM_Filtered_DC_Conversion():
     
     # define some other constants
     DELAY = 0.25 # timed delay value in units of seconds
-    no_reads = 50 # no. averages reads needed
+    no_reads = 25 # no. averages reads needed
     voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
     pwmPin = "D13"
     pwmSet = the_interval.start # initiliase the PWM value
@@ -786,8 +788,13 @@ def Calibrate_PWM_Filtered_DC_Conversion():
     
     the_dev.ZeroIBM4() # ground the analog outputs
     print('Sweep complete')
-    print(voltage_data)
+    print(voltage_data.transpose())
     
+    # Make a linear fit to the filtered PWM vs DC val data
+    inter, slope = Common.linear_fit(voltage_data.transpose()[0], voltage_data.transpose()[1], [1,1])
+    
+    print('Slope: %(v1)0.4f'%{"v1":slope})
+    print('Intercept: %(v1)0.4f'%{"v1":inter})
     
 def main():
     pass
