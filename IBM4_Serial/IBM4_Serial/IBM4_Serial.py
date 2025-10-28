@@ -747,6 +747,48 @@ def MultimeterPrompt():
         print(theOptions[i].ljust(width),theValues[i])
     print(message)
     
+def Calibrate_PWM_Filtered_DC_Conversion():
+    
+    # Calibrate the PWM- Filtered DC Conversion
+    # Assumes that A2 - Filtered PWM and A3 - GND
+    # R. Sheehan 28 - 10 - 2025
+
+    # instantiate an object to keep track of the sweep space parameters
+    no_steps = 5
+    v_start = 0.0
+    v_end = 100.0
+    the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
+    
+    # instantiate an object that interfaces with the IBM4
+    the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+    
+    # define some other constants
+    DELAY = 0.25 # timed delay value in units of seconds
+    no_reads = 50 # no. averages reads needed
+    voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
+    pwmPin = "D13"
+    pwmSet = the_interval.start # initiliase the PWM value
+    count = 0
+    while pwmSet < the_interval.stop+1:
+        step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
+        the_dev.WriteAnyPWM(pwmPin, pwmSet)
+        time.sleep(DELAY) # Apply a fixed delay
+        pwmFilt = the_dev.DiffReadAverage('A2', 'A3', no_reads)
+        # save the data
+        step_data = numpy.append(step_data, pwmSet) # store the set-voltage value for this step
+        step_data = numpy.append(step_data, pwmFilt) # store the  measured voltage values for this step
+        # store the  set-voltage and the measured voltage values from all channels for this step
+        # use append on the first step to initialise the voltage_data array
+        # use vstack on subsequent steps to build up the 2D array of data
+        voltage_data = numpy.append(voltage_data, step_data) if count == 0 else numpy.vstack([voltage_data, step_data])        
+        pwmSet = pwmSet + the_interval.delta
+        count = count + 1 if count == 0 else count # only need to increment count once to build up the array
+    
+    the_dev.ZeroIBM4() # ground the analog outputs
+    print('Sweep complete')
+    print(voltage_data)
+    
+    
 def main():
     pass
 
@@ -777,8 +819,10 @@ if __name__ == '__main__':
     
     #FindIBM4()
     
-    Class_Testing()
+    #Class_Testing()
     
     #action = input(MultimeterPrompt())
     
     #MultimeterPrompt()
+    
+    Calibrate_PWM_Filtered_DC_Conversion()

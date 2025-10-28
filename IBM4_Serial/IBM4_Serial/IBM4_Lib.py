@@ -240,7 +240,7 @@ class Ser_Iface(object):
                 #self.instr_obj.write(b'PWM9:0\r\n')
                 # Set all PWM outputs to GND
                 # PWM pins 0, 1, 7, 9, 10, 11, 12, 13                
-                for v in self.PWM_Chnnls.items():
+                for k, v in self.PWM_Chnnls.items():
                     PWM_cmd = 'PWM%(v1)d:0\r\n'%{"v1":v}
                     self.instr_obj.write( str.encode( PWM_cmd ) )
                 #self.ResetBuffer() # reset buffer
