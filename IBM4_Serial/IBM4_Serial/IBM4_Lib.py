@@ -846,7 +846,7 @@ class Ser_Iface(object):
                 read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed                
                 vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list
                 self.ResetBuffer() # reset buffer between write, read cmd pairs
-                vals_flt = numpy.float_(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
+                vals_flt = numpy.float64(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
                 vals_mean = numpy.mean(vals_flt) # compute the average of all the diff_reads
                 vals_delta = 0.5*( numpy.max(vals_flt) - numpy.min(vals_flt) ) # compute the range of the diff_read
                 res = [vals_mean, vals_delta, vals_flt]
@@ -1065,7 +1065,7 @@ class Ser_Iface(object):
                 vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list of strings
                 #vals_flt = [float(x) for x in vals_str] # convert the list of strings to floats, save as a list
                 # only interested in the last no_reads values so read backwards into the vals_str list using list-slice operator
-                vals_flt = numpy.float_(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
+                vals_flt = numpy.float64(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
                 if loud: 
                     print(read_result)
                     print(vals_flt) # print the parsed values
