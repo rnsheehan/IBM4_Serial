@@ -798,7 +798,68 @@ def Calibrate_PWM_Filtered_DC_Conversion():
     print('Sweep complete')
     print('filtPWM_%(v1)s = %(v2)0.4f DC + %(v3)0.4f'%{"v1":pwmPin, "v2":slope, "v3":inter})
     
-def Calibrate_PWM_Filtered_DC_Amp_Conversion():
+def Plot_Save_PWM_Calibration_Data(pwmPin, pwmData, loud = False):
+    
+    # Make a plot of the measured PWM calibration data
+    # pwmData is stored in the form [pwmSet, pwmFilt, pwmFilt_error, pwmAmp, pwmAmp_error] 
+    # R. Sheehan 29 - 10 - 2025
+    
+    # Write the measured data to a file
+    filename = '%(v1)s_PWM_Filt_Amp_Data.txt'%{"v1":pwmPin}
+    numpy.savetxt(filename, pwmData, delimiter = '\t')
+
+    # Declare the lists needed to generate the plots
+    hv_data = []
+    labels = []
+    marks = []
+    
+    hv_data.append([pwmData.transpose()[0], pwmData.transpose()[1], pwmData.transpose()[2]])
+    labels.append('%(v1)s Filt'%{"v1":pwmPin}); marks.append(Plotting.labs_pts[0]); 
+    hv_data.append([pwmData.transpose()[0], pwmData.transpose()[3], pwmData.transpose()[4]])
+    labels.append('%(v1)s Amp'%{"v1":pwmPin}); marks.append(Plotting.labs_pts[1]);
+
+    # Generate the combined plot with error bars
+    args = Plotting.plot_arg_multiple()
+    
+    args.loud = loud
+    args.crv_lab_list = labels
+    args.mrk_list = marks
+    args.x_label = 'PWM Duty Cycle (%)'
+    args.y_label = 'PWM Output (V)'
+    args.plt_range = [0, 105, 0, 6]
+    args.fig_name = filename.replace('.txt','')
+    
+    Plotting.plot_multiple_linear_fit_curves(hv_data, args)
+
+def Linear_Fit_PWM_Calibration_Data(pwmPin, pwmData, loud = False):
+
+    # Perform a linear fit to the measured PWM calibration data
+    # pwmData is stored in the form [pwmSet, pwmFilt, pwmFilt_error, pwmAmp, pwmAmp_error] 
+    # R. Sheehan 29 - 10 - 2025
+    
+    # Make a linear fit to the filtered PWM vs DC val data
+    interPWM, slopePWM = Common.linear_fit(pwmData.transpose()[0], pwmData.transpose()[1], [1,1])
+    interAmp, slopeAmp = Common.linear_fit(pwmData.transpose()[0], pwmData.transpose()[3], [1,1])
+    
+    if loud:
+        print('Sweep complete %(v1)s'%{"v1":pwmPin})
+        print('filtPWM_%(v1)s = %(v2)0.4f DC + %(v3)0.4f'%{"v1":pwmPin, "v2":slopePWM, "v3":interPWM})
+        print('ampPWM_%(v1)s = %(v2)0.4f DC + %(v3)0.4f'%{"v1":pwmPin, "v2":slopeAmp, "v3":interAmp})
+    
+    # Write the computed fit coefficients to a file
+    lin_coeff_file = 'PWM_DC_AMP_Fit_Parameters.txt'
+    
+    if glob.glob(lin_coeff_file):
+        # file exists, open it and append data to it
+        the_file = open(lin_coeff_file, "a")
+        the_file.write("%(v1)s, %(v2)0.9f, %(v3)0.9f, %(v4)0.9f, %(v5)0.9f\n"%{"v1":pwmPin, "v2":slopePWM, "v3":interPWM, "v4":slopeAmp, "v5":interAmp})
+    else:
+        # file does not exist, create it, and write data to it
+        the_file = open(lin_coeff_file, "w")
+        the_file.write("PWM Pin No., DC Slope, DC Intercept, Amp Slope, Amp Intercept\n")
+        the_file.write("%(v1)s, %(v2)0.9f, %(v3)0.9f, %(v4)0.9f, %(v5)0.9f\n"%{"v1":pwmPin, "v2":slopePWM, "v3":interPWM, "v4":slopeAmp, "v5":interAmp})
+
+def Calibrate_PWM_Filtered_DC_Amp_Conversion(loud = False):
     
     # Calibrate the PWM- Filtered DC - Amp output Conversion
     # Assumes that A2 - Filtered PWM and A3 - Reduced Amp output and A4, A5, D2 are GND
@@ -821,8 +882,9 @@ def Calibrate_PWM_Filtered_DC_Amp_Conversion():
     sf = R2 / (R1 + R2) # voltage divider scale factor
     fs = 1.0 / sf # inverse of voltage divider scale factor
     voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
-    pwmPin = "D9"
+    pwmPin = "D11"
     pwmSet = the_interval.start # initiliase the PWM value
+    print('Calibrating PWM pin:%(v1)s'%{"v1":pwmPin})
     count = 0
     
     start = time.time() # start the measurement timer
@@ -832,12 +894,14 @@ def Calibrate_PWM_Filtered_DC_Amp_Conversion():
         the_dev.WriteAnyPWM(pwmPin, pwmSet)
         time.sleep(DELAY) # Apply a fixed delay
         #pwmFilt = the_dev.ReadAverageVoltageAllChnnl(no_reads)
-        pwmFilt = the_dev.DiffReadAverage('A2', 'A4', no_reads)
-        pwmAmp = fs * the_dev.DiffReadAverage('A3', 'A4', no_reads) # this value is being read through a voltage divider
+        pwmFilt = the_dev.DiffReadMultiple('A2', 'A4', no_reads)
+        pwmAmp = the_dev.DiffReadMultiple('A3', 'A4', no_reads) # this value is being read through a voltage divider
         # save the data
         step_data = numpy.append(step_data, pwmSet) # store the set-voltage value for this step
-        step_data = numpy.append(step_data, pwmFilt) # store the  measured voltage values for this step
-        step_data = numpy.append(step_data, pwmAmp) # store the  measured voltage values for this step
+        step_data = numpy.append(step_data, pwmFilt[0]) # store the measured voltage for this step
+        step_data = numpy.append(step_data, pwmFilt[1]) # store the measured error for this step
+        step_data = numpy.append(step_data, fs * pwmAmp[0]) # store the measured voltage for this step
+        step_data = numpy.append(step_data, fs * pwmAmp[1]) # store the measured error for this step
         # store the  set-voltage and the measured voltage values from all channels for this step
         # use append on the first step to initialise the voltage_data array
         # use vstack on subsequent steps to build up the 2D array of data
@@ -848,39 +912,19 @@ def Calibrate_PWM_Filtered_DC_Amp_Conversion():
     end = time.time() # end the measurement timer
     deltaT = end-start # total measurement time
     measT = deltaT/(float(no_steps)) # single measurement time 
+    print('Sweep complete\n')
     print("\n%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":no_steps, "v2":deltaT})
-    print("%(v1)0.4f secs / measurement"%{"v1":measT})
+    print("%(v1)0.4f secs / measurement\n"%{"v1":measT})
         
     the_dev.ZeroIBM4() # ground the analog outputs
-    #print('Sweep complete')
-    #print(voltage_data.transpose())
     
-    # Write the measured data to a file
+    if loud: print(voltage_data.transpose())
     
+    # Write the measured data to a file and generate a plot of the measured data
+    Plot_Save_PWM_Calibration_Data(pwmPin, voltage_data)
     
-    # Make a linear fit to the filtered PWM vs DC val data
-    interPWM, slopePWM = Common.linear_fit(voltage_data.transpose()[0], voltage_data.transpose()[1], [1,1])
-    interAmp, slopeAmp = Common.linear_fit(voltage_data.transpose()[0], voltage_data.transpose()[2], [1,1])
-    
-    #print('Slope: %(v1)0.4f'%{"v1":slope})
-    #print('Intercept: %(v1)0.4f'%{"v1":inter})
-    print('Sweep complete %(v1)s'%{"v1":pwmPin})
-    print('filtPWM_%(v1)s = %(v2)0.4f DC + %(v3)0.4f'%{"v1":pwmPin, "v2":slopePWM, "v3":interPWM})
-    print('ampPWM_%(v1)s = %(v2)0.4f DC + %(v3)0.4f'%{"v1":pwmPin, "v2":slopeAmp, "v3":interAmp})
-    
-    # Write the computed fit coefficients to a file
-    lin_coeff_file = 'PWM_DC_AMP_Fit_Parameters.txt'
-    
-    if glob.glob(lin_coeff_file):
-        # file exists, open it and append data to it
-        the_file = open(lin_coeff_file, "a")
-        the_file.write("%(v1)s, %(v2)0.9f, %(v3)0.9f, %(v4)0.9f, %(v5)0.9f\n"%{"v1":pwmPin, "v2":slopePWM, "v3":interPWM, "v4":slopeAmp, "v5":interAmp})
-    else:
-        # file does not exist, create it, and write data to it
-        the_file = open(lin_coeff_file, "w")
-        the_file.write("PWM Pin No., DC Slope, DC Intercept, Amp Slope, Amp Intercept\n")
-        the_file.write("%(v1)s, %(v2)0.9f, %(v3)0.9f, %(v4)0.9f, %(v5)0.9f\n"%{"v1":pwmPin, "v2":slopePWM, "v3":interPWM, "v4":slopeAmp, "v5":interAmp})
-
+    # Make a linear fit to the measured data
+    Linear_Fit_PWM_Calibration_Data(pwmPin, voltage_data, loud = True)
     
 def main():
     pass
