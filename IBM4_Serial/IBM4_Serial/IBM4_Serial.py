@@ -22,6 +22,7 @@ import serial
 import pyvisa
 import time
 import numpy
+import math
 import Common
 import Plotting
 
@@ -926,6 +927,39 @@ def Calibrate_PWM_Filtered_DC_Amp_Conversion(loud = False):
     # Make a linear fit to the measured data
     Linear_Fit_PWM_Calibration_Data(pwmPin, voltage_data, loud = True)
     
+def Compute_Average_Cal_Parameters():
+    
+    # Import the data for the calibration curves for each PWM pin
+    # Find the average over all the calibration curves
+    # R. Sheehan 29 - 10 - 2025
+
+    filename = 'PWM_DC_AMP_Fit_Parameters.txt'
+    
+    if glob.glob(filename):
+        theData = numpy.loadtxt(filename, unpack = True, delimiter = ',',skiprows = 1, usecols=(1, 2, 3, 4))
+                
+        # Is the cal curve for D13 actually that different? 
+        # Yes the value computed from D13 is sufficiently different 17 (mV)
+        # to warrant it's being treated differently
+        
+        m1 = numpy.mean(theData[0][0:-2]); c1 = numpy.mean(theData[1][0:-2]); 
+        m2 = numpy.mean(theData[0]); c2 = numpy.mean(theData[1]); 
+        m3 = numpy.mean(theData[2][0:-2]); c3 = numpy.mean(theData[3][0:-2]); 
+        m4 = numpy.mean(theData[2]); c4 = numpy.mean(theData[3]); 
+        
+        DC = 30
+        v1 = m1*DC+c1; v2 = m2*DC+c2; pwmErr = math.fabs(v1-v2); 
+        v3 = m3*DC+c3; v4 = m4*DC+c4; ampErr = math.fabs(v3-v4); 
+        
+        print('PWM Slope:',m1,', PWM Intercept:',c1)
+        print('PWM Slope Alt:',m2,', PWM Intercept Alt:',c2)
+        print('Amp Slope:',m3,', Amp Intercept:',c3)
+        print('Amp Slope:',m4,', Amp Intercept:',c4)        
+        
+        print('\nPWM val: %(v1)0.3f (V), PWM val: %(v2)0.3f (V), Err: %(v3)0.3f (V)'%{"v1":v1, "v2":v2, "v3":pwmErr})
+        print('Amp val: %(v1)0.3f (V), Amp val: %(v2)0.3f (V), Err: %(v3)0.3f (V)'%{"v1":v3, "v2":v4, "v3":ampErr})
+
+    
 def main():
     pass
 
@@ -964,4 +998,6 @@ if __name__ == '__main__':
     
     #Calibrate_PWM_Filtered_DC_Conversion()
     
-    Calibrate_PWM_Filtered_DC_Amp_Conversion()
+    #Calibrate_PWM_Filtered_DC_Amp_Conversion()
+    
+    Compute_Average_Cal_Parameters()
