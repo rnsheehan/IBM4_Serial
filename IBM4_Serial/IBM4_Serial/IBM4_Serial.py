@@ -990,7 +990,7 @@ if __name__ == '__main__':
     
     #FindIBM4()
     
-    #Class_Testing()
+    Class_Testing()
     
     #action = input(MultimeterPrompt())
     
@@ -1000,4 +1000,4 @@ if __name__ == '__main__':
     
     #Calibrate_PWM_Filtered_DC_Amp_Conversion()
     
-    Compute_Average_Cal_Parameters()
+    #Compute_Average_Cal_Parameters()
