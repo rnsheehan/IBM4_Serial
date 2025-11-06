@@ -806,7 +806,7 @@ def Plot_Save_PWM_Calibration_Data(pwmPin, pwmData, loud = False):
     # R. Sheehan 29 - 10 - 2025
     
     # Write the measured data to a file
-    filename = '%(v1)s_PWM_Filt_Amp_Data.txt'%{"v1":pwmPin}
+    filename = '%(v1)s_PWM_T_Filt_Amp_Data.txt'%{"v1":pwmPin}
     numpy.savetxt(filename, pwmData, delimiter = '\t')
 
     # Declare the lists needed to generate the plots
@@ -848,7 +848,7 @@ def Linear_Fit_PWM_Calibration_Data(pwmPin, pwmData, loud = False):
         print('ampPWM_%(v1)s = %(v2)0.4f DC + %(v3)0.4f'%{"v1":pwmPin, "v2":slopeAmp, "v3":interAmp})
     
     # Write the computed fit coefficients to a file
-    lin_coeff_file = 'PWM_DC_AMP_Fit_Parameters.txt'
+    lin_coeff_file = 'PWM_T_DC_AMP_Fit_Parameters.txt'
     
     if glob.glob(lin_coeff_file):
         # file exists, open it and append data to it
@@ -883,7 +883,7 @@ def Calibrate_PWM_Filtered_DC_Amp_Conversion(loud = False):
     sf = R2 / (R1 + R2) # voltage divider scale factor
     fs = 1.0 / sf # inverse of voltage divider scale factor
     voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
-    pwmPin = "D11"
+    pwmPin = "D8"
     pwmSet = the_interval.start # initiliase the PWM value
     print('Calibrating PWM pin:%(v1)s'%{"v1":pwmPin})
     count = 0
@@ -990,7 +990,7 @@ if __name__ == '__main__':
     
     #FindIBM4()
     
-    Class_Testing()
+    #Class_Testing()
     
     #action = input(MultimeterPrompt())
     
@@ -998,6 +998,6 @@ if __name__ == '__main__':
     
     #Calibrate_PWM_Filtered_DC_Conversion()
     
-    #Calibrate_PWM_Filtered_DC_Amp_Conversion()
+    Calibrate_PWM_Filtered_DC_Amp_Conversion()
     
     #Compute_Average_Cal_Parameters()
