@@ -25,6 +25,7 @@ import numpy
 import math
 import Common
 import Plotting
+import matplotlib.pyplot as plt
 
 #import IBM4_Library_VISA # IBM4 interface based on VISA, 
 import Sweep_Interval
@@ -993,6 +994,7 @@ def Long_Voltage_Measure():
     the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
 
     # output voltage on both pwmPins
+    the_dev.ZeroIBM4()
     the_dev.WriteAnyPWM(pwmPin1, pwmSet) 
     the_dev.WriteAnyPWM(pwmPin2, pwmSet)
     time.sleep(T_sep)    
@@ -1006,7 +1008,7 @@ def Long_Voltage_Measure():
         # Want to save the differential readings relative to GND
         step_data = the_dev.ReadAverageVoltageAllChnnl(N_reads)        
         this_meas = time.time() # record time since start of measurement
-        elapsed = this_meas - start_meas # time since start of measurement in secs
+        elapsed = (this_meas - start_meas) / 60.0 # time since start of measurement in minutes
         step_data = 2.0*(step_data[0:3] - step_data[-1]) # subtract the ground value from all readings, re-scale and drop the values you don't want        
         step_data = numpy.insert(step_data, 0, elapsed) # save elapsed time, External Power Supply Reference Voltage, pwmPin1, pwmPin2
         # store the time-data and the measured voltage values from all channels for this step
@@ -1017,6 +1019,60 @@ def Long_Voltage_Measure():
         count += 1
 
     end_meas = time.time() # end of measurement
+
+    the_dev.ZeroIBM4()
+
+    # Report on the data
+    averages = numpy.array([])
+    stdevs = numpy.array([])
+    voltages = ['Reference', pwmPin1, pwmPin2]
+    hv_data = []; marks = [];
+    for i in range(1, len(voltage_data), 1):
+        averages = numpy.append(averages, numpy.mean(voltage_data[:,i])) # select the columns
+        stdevs = numpy.append(stdevs, numpy.std(voltage_data[:,i], ddof = 1))
+        
+        hv_data.append([voltage_data[:,0], voltage_data[:,i]])
+        marks.append(Plotting.labs_lins[i])
+
+    print("\nAverage Measured Values")
+    for i in range(0, len(averages), 1):
+        print('%(v1)s: %(v2)0.3f +/- %(v3)0.3f (V)'%{"v1":voltages[i], "v2":averages[i], "v3":stdevs[i]})
+
+    # Make a time series plot of the data
+    args = Plotting.plot_arg_multiple()
+
+    args.loud = True
+    args.mrk_list = marks
+    args.crv_lab_list = voltages
+    args.x_label('Time ( min )')
+    args.x_label('Voltage ( V )')
+    args.fig_name('PCB_Output_%(v1)s_%(v2)s'%{"v1":pwmPin1, "v2":pwmPin2})
+
+    Plotting.plot_multiple_curves(hv_data, args)
+
+    # Make a histogram of the data
+    # scale the data horizontally so that the distributions sit on top of one another
+    # emphasise the similarities between the distributions
+
+    # Use Sturges' Rule to compute the no. of bins required
+    n_bins = int( 1.0 + 3.322*math.log( len(voltage_data[:,0]) ) )
+
+    scl_data = numpy.array([])
+    for i in range(0, len(averages), 1):
+        scl_data = numpy.append(scl_data, (voltage_data[:,i+1] - averages[i] ) / stdevs[i] ) if i==0 else numpy.vstack([scl_data, (voltage_data[:,i+1] - averages[i] ) / stdevs[i] ])
+
+    plt.hist(scl_data[0], bins = n_bins, label = r'%(v1)s $\sigma$ = 2 $\mu$V'%{"v1":voltages[0]}, alpha=0.9, color = 'red', edgecolor = 'black', linestyle = '-')
+    plt.hist(scl_data[1], bins = n_bins, label = r'%(v1)s $\sigma$ = 1 $\mu$V'%{"v1":voltages[1]}, alpha=0.65, color = 'green' , edgecolor = 'black', linestyle = '--')
+    plt.hist(scl_data[2], bins = n_bins, label = r'%(v1)s $\sigma$ = 3 $\mu$V'%{"v1":voltages[2]}, alpha=0.6, color = 'blue', edgecolor = 'black', linestyle = ':' )
+    plt.xlim(xmin=-3, xmax = 3)
+    plt.xlabel(r'Scaled Measurements $( V_{i} - \mu ) / \sigma$', fontsize = 14)
+    plt.ylabel('Counts', fontsize = 14)
+    plt.legend(loc = 'best')
+    plt.savefig('Scaled_Voltage_Hist')
+    plt.show()            
+    plt.clf()
+    plt.cla()
+    plt.close()
 
 def main():
     pass
@@ -1029,15 +1085,14 @@ if __name__ == '__main__':
     print(pwd)
 
     step_data = numpy.array([2.57, 1.04, 0.567, 0.05, 0.06])
-
-
+    
     print(step_data)
     print(step_data[0:3] - step_data[-1])
     print(2.0*(step_data[0:3] - step_data[-1]))
 
     step_data = 2.0*(step_data[0:3] - step_data[-1])
 
-    print(numpy.insert(step_data,0, 7.7))
+    print(numpy.insert(step_data, 0, 7.7))
 
     #Serial_Attempt()
 
