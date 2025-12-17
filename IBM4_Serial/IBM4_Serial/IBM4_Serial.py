@@ -982,12 +982,12 @@ def Long_Voltage_Measure():
     # R. Sheehan 15 - 12 - 2025
 
     # As it is I can use 2-PWM channels to output DC signal
-    pwmPin1 = 'D9'
-    pwmPin2 = 'D13'
-    pwmSet = 50
-    T_sep = 20 # time between measurements in sec
-    N_meas = 200 # total no. meas
-    N_reads = 25
+    pwmPin1 = 'D1'
+    pwmPin2 = 'D9'
+    pwmSet = 25
+    T_sep = 10 # time between measurements in sec
+    N_meas = 100 # total no. meas
+    N_reads = 10
     voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
 
     # instantiate an object that interfaces with the IBM4
@@ -997,82 +997,97 @@ def Long_Voltage_Measure():
     the_dev.ZeroIBM4()
     the_dev.WriteAnyPWM(pwmPin1, pwmSet) 
     the_dev.WriteAnyPWM(pwmPin2, pwmSet)
+    print(the_dev.ReadAverageVoltageAllChnnl(N_reads))
     time.sleep(T_sep)    
 
-    count = 0
-    start_meas = time.time() # start of measurement
-    while count < N_meas:
-        step_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
-        # read an averaged voltage reading across all channels
-        # It's being assumed that A2 -> External Power Supply Reference Voltage, A3 -> pwmPin1, A4 -> pwmPin2, A5 ->  GND, D2 -> GND
-        # Want to save the differential readings relative to GND
-        step_data = the_dev.ReadAverageVoltageAllChnnl(N_reads)        
-        this_meas = time.time() # record time since start of measurement
-        elapsed = (this_meas - start_meas) / 60.0 # time since start of measurement in minutes
-        step_data = 2.0*(step_data[0:3] - step_data[-1]) # subtract the ground value from all readings, re-scale and drop the values you don't want        
-        step_data = numpy.insert(step_data, 0, elapsed) # save elapsed time, External Power Supply Reference Voltage, pwmPin1, pwmPin2
-        # store the time-data and the measured voltage values from all channels for this step
-        # use append on the first step to initialise the voltage_data array
-        # use vstack on subsequent steps to build up the 2D array of data
-        voltage_data = numpy.append(voltage_data, step_data) if count == 0 else numpy.vstack([voltage_data, step_data])        
-        time.sleep(T_sep)
-        count += 1
+    ACTUALLY_RUN_MEAS = True
 
-    end_meas = time.time() # end of measurement
+    if ACTUALLY_RUN_MEAS:
+        count = 0
+        start_meas = time.time() # start of measurement
+        while count < N_meas:
+            step_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
+            # read an averaged voltage reading across all channels
+            # It's being assumed that A2 -> External Power Supply Reference Voltage, A3 -> pwmPin1, A4 -> pwmPin2, A5 ->  GND, D2 -> GND
+            # Want to save the differential readings relative to GND
+            step_data = the_dev.ReadAverageVoltageAllChnnl(N_reads)        
+            this_meas = time.time() # record time since start of measurement
+            elapsed = (this_meas - start_meas) / 60.0 # time since start of measurement in minutes
+            step_data = 2.0*(step_data[0:3] - step_data[-1]) # subtract the ground value from all readings, re-scale and drop the values you don't want        
+            step_data = numpy.insert(step_data, 0, elapsed) # save elapsed time, External Power Supply Reference Voltage, pwmPin1, pwmPin2
+            # store the time-data and the measured voltage values from all channels for this step
+            # use append on the first step to initialise the voltage_data array
+            # use vstack on subsequent steps to build up the 2D array of data
+            voltage_data = numpy.append(voltage_data, step_data) if count == 0 else numpy.vstack([voltage_data, step_data])        
+            time.sleep(T_sep)
+            count += 1
 
-    the_dev.ZeroIBM4()
+        end_meas = time.time() # end of measurement
 
-    # Report on the data
-    averages = numpy.array([])
-    stdevs = numpy.array([])
-    voltages = ['Reference', pwmPin1, pwmPin2]
-    hv_data = []; marks = [];
-    for i in range(1, len(voltage_data), 1):
-        averages = numpy.append(averages, numpy.mean(voltage_data[:,i])) # select the columns
-        stdevs = numpy.append(stdevs, numpy.std(voltage_data[:,i], ddof = 1))
+        del the_dev
+
+        print()
+        print("Measurement complete. Total Time: ",(end_meas - start_meas) / 60.0," minutes")
+        print()
+
+        filename = 'PCB_PWM_Test_Data_%(v1)d_%(v2)s.txt'%{"v1":pwmPin1, "v2":pwmPin2}
+        numpy.savetxt(filename, voltage_data, delimiter = '\t')
+
+        # Report on the data
+        averages = numpy.array([])
+        stdevs = numpy.array([])
+        voltages = ['Reference', pwmPin1, pwmPin2]
+        hv_data = []; marks = [];
+        # remember that voltage_data is saved in row-format
+        # no-columns equals no-elements in each row
+        # probably easier just to work with the transpose of the array
+        # but I like using the list-slice grammar, probably more efficient than taking a transpose
+        for i in range(1, len(voltage_data[0]), 1):
+            averages = numpy.append(averages, numpy.mean(voltage_data[:,i]) ) # select the columns
+            stdevs = numpy.append(stdevs, numpy.std(voltage_data[:,i], ddof = 1) )
         
-        hv_data.append([voltage_data[:,0], voltage_data[:,i]])
-        marks.append(Plotting.labs_lins[i])
+            hv_data.append([voltage_data[:,0], voltage_data[:,i]])
+            marks.append(Plotting.labs_lins[i])
 
-    print("\nAverage Measured Values")
-    for i in range(0, len(averages), 1):
-        print('%(v1)s: %(v2)0.3f +/- %(v3)0.3f (V)'%{"v1":voltages[i], "v2":averages[i], "v3":stdevs[i]})
+        print("\nAverage Measured Values")
+        for i in range(0, len(averages), 1):
+            print('%(v1)s: %(v2)0.3f +/- %(v3)0.3f (V)'%{"v1":voltages[i], "v2":averages[i], "v3":stdevs[i]})
 
-    # Make a time series plot of the data
-    args = Plotting.plot_arg_multiple()
+        # Make a time series plot of the data
+        args = Plotting.plot_arg_multiple()
 
-    args.loud = True
-    args.mrk_list = marks
-    args.crv_lab_list = voltages
-    args.x_label('Time ( min )')
-    args.x_label('Voltage ( V )')
-    args.fig_name('PCB_Output_%(v1)s_%(v2)s'%{"v1":pwmPin1, "v2":pwmPin2})
+        args.loud = False
+        args.mrk_list = marks
+        args.crv_lab_list = voltages
+        args.x_label = 'Time ( min )'
+        args.y_label = 'Voltage ( V )'
+        args.fig_name = 'PCB_Output_%(v1)s_%(v2)s'%{"v1":pwmPin1, "v2":pwmPin2}
 
-    Plotting.plot_multiple_curves(hv_data, args)
+        Plotting.plot_multiple_curves(hv_data, args)
 
-    # Make a histogram of the data
-    # scale the data horizontally so that the distributions sit on top of one another
-    # emphasise the similarities between the distributions
+        # Make a histogram of the data
+        # scale the data horizontally so that the distributions sit on top of one another
+        # emphasise the similarities between the distributions
 
-    # Use Sturges' Rule to compute the no. of bins required
-    n_bins = int( 1.0 + 3.322*math.log( len(voltage_data[:,0]) ) )
+        # Use Sturges' Rule to compute the no. of bins required
+        n_bins = int( 1.0 + 3.322*math.log( len(voltage_data[:,0]) ) )
 
-    scl_data = numpy.array([])
-    for i in range(0, len(averages), 1):
-        scl_data = numpy.append(scl_data, (voltage_data[:,i+1] - averages[i] ) / stdevs[i] ) if i==0 else numpy.vstack([scl_data, (voltage_data[:,i+1] - averages[i] ) / stdevs[i] ])
+        scl_data = numpy.array([])
+        for i in range(0, len(averages), 1):
+            scl_data = numpy.append(scl_data, (voltage_data[:,i+1] - averages[i] ) / stdevs[i] ) if i==0 else numpy.vstack([scl_data, (voltage_data[:,i+1] - averages[i] ) / stdevs[i] ])
 
-    plt.hist(scl_data[0], bins = n_bins, label = r'%(v1)s $\sigma$ = 2 $\mu$V'%{"v1":voltages[0]}, alpha=0.9, color = 'red', edgecolor = 'black', linestyle = '-')
-    plt.hist(scl_data[1], bins = n_bins, label = r'%(v1)s $\sigma$ = 1 $\mu$V'%{"v1":voltages[1]}, alpha=0.65, color = 'green' , edgecolor = 'black', linestyle = '--')
-    plt.hist(scl_data[2], bins = n_bins, label = r'%(v1)s $\sigma$ = 3 $\mu$V'%{"v1":voltages[2]}, alpha=0.6, color = 'blue', edgecolor = 'black', linestyle = ':' )
-    plt.xlim(xmin=-3, xmax = 3)
-    plt.xlabel(r'Scaled Measurements $( V_{i} - \mu ) / \sigma$', fontsize = 14)
-    plt.ylabel('Counts', fontsize = 14)
-    plt.legend(loc = 'best')
-    plt.savefig('Scaled_Voltage_Hist')
-    plt.show()            
-    plt.clf()
-    plt.cla()
-    plt.close()
+        plt.hist(scl_data[0], bins = n_bins, label = r'%(v1)s $\sigma$ = %(v2)0.2f mV'%{"v1":voltages[0], "v2":1000.0*stdevs[0]}, alpha=0.9, color = 'red', edgecolor = 'black', linestyle = '-')
+        plt.hist(scl_data[1], bins = n_bins, label = r'%(v1)s $\sigma$ = %(v2)0.2f mV'%{"v1":voltages[1], "v2":1000.0*stdevs[1]}, alpha=0.65, color = 'green' , edgecolor = 'black', linestyle = '--')
+        plt.hist(scl_data[2], bins = n_bins, label = r'%(v1)s $\sigma$ = %(v2)0.2f mV'%{"v1":voltages[2], "v2":1000.0*stdevs[2]}, alpha=0.6, color = 'blue', edgecolor = 'black', linestyle = ':' )
+        plt.xlim(xmin=-3, xmax = 3)
+        plt.xlabel(r'Scaled Measurements $( V_{i} - \mu ) / \sigma$', fontsize = 14)
+        plt.ylabel('Counts', fontsize = 14)
+        plt.legend(loc = 'best')
+        plt.savefig('Historgram_PCB_Output_%(v1)s_%(v2)s'%{"v1":pwmPin1, "v2":pwmPin2})
+        #plt.show()            
+        plt.clf()
+        plt.cla()
+        plt.close()
 
 def main():
     pass
@@ -1093,6 +1108,29 @@ if __name__ == '__main__':
     step_data = 2.0*(step_data[0:3] - step_data[-1])
 
     print(numpy.insert(step_data, 0, 7.7))
+
+    # Testing Average Calculation
+    # voltage_data = numpy.loadtxt('PCB_PWM_Test_Data.txt', delimiter = '\t', unpack = False)
+
+    # print(voltage_data)
+
+    # averages = numpy.array([])
+    # stdevs = numpy.array([])
+    # voltages = ['Reference', 'pwmPin1', 'pwmPin2']
+    # hv_data = []; marks = [];
+    # print(len(voltage_data))
+    # print(len(voltage_data[0]))
+    # for i in range(1, len(voltage_data[0]), 1):
+    #     print(voltage_data[:,i])
+    #     averages = numpy.append(averages, numpy.mean(voltage_data[:,i]) ) # select the columns
+    #     stdevs = numpy.append(stdevs, numpy.std(voltage_data[:,i], ddof = 1) )
+        
+    #     hv_data.append([voltage_data[:,0], voltage_data[:,i]])
+    #     marks.append(Plotting.labs_lins[i])
+
+    # print("\nAverage Measured Values")
+    # for i in range(0, len(averages), 1):
+    #     print('%(v1)s: %(v2)0.3f +/- %(v3)0.3f (V)'%{"v1":voltages[i], "v2":averages[i], "v3":stdevs[i]})
 
     #Serial_Attempt()
 
@@ -1125,3 +1163,5 @@ if __name__ == '__main__':
     #Calibrate_PWM_Filtered_DC_Amp_Conversion()
     
     #Compute_Average_Cal_Parameters()
+
+    Long_Voltage_Measure()

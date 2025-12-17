@@ -104,8 +104,8 @@ class Ser_Iface(object):
             # Dictionaries for the Read, Write, PWM Channels
             self.Read_Chnnls = {"A2":0, "A3":1, "A4":2, "A5":3, "D2":4}
             self.Write_Chnnls = {"A0":0, "A1":1}
-            #self.PWM_Chnnls = {"D0":0, "D1":1, "D7":7, "D9":9, "D10":10, "D11":11, "D12":12, "D13":13}
-            self.PWM_Chnnls = {"D1":0, "D2":1, "D3":7, "D4":9, "D5":10, "D6":11, "D7":12, "D8":13}
+            self.PWM_Chnnls = {"D0":0, "D1":1, "D7":7, "D9":9, "D10":10, "D11":11, "D12":12, "D13":13}
+            #self.PWM_Chnnls = {"D1":0, "D2":1, "D3":7, "D4":9, "D5":10, "D6":11, "D7":12, "D8":13}
             
             # Dictionary for the Read Mode
             self.Read_Modes = {"DC":0, "AC":1}
