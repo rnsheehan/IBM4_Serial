@@ -986,8 +986,8 @@ def Long_Voltage_Measure():
     pwmPin2 = 'D9'
     pwmSet = 25
     T_sep = 10 # time between measurements in sec
-    N_meas = 100 # total no. meas
-    N_reads = 10
+    N_meas = 5 # total no. meas
+    N_reads = 5
     voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
 
     # instantiate an object that interfaces with the IBM4
@@ -1030,7 +1030,7 @@ def Long_Voltage_Measure():
         print("Measurement complete. Total Time: ",(end_meas - start_meas) / 60.0," minutes")
         print()
 
-        filename = 'PCB_PWM_Test_Data_%(v1)d_%(v2)s.txt'%{"v1":pwmPin1, "v2":pwmPin2}
+        filename = 'PCB_PWM_Test_Data_%(v1)s_%(v2)s.txt'%{"v1":pwmPin1, "v2":pwmPin2}
         numpy.savetxt(filename, voltage_data, delimiter = '\t')
 
         # Report on the data
