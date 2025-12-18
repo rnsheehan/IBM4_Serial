@@ -983,11 +983,11 @@ def Long_Voltage_Measure():
 
     # As it is I can use 2-PWM channels to output DC signal
     pwmPin1 = 'D1'
-    pwmPin2 = 'D9'
+    pwmPin2 = 'D7'
     pwmSet = 25
     T_sep = 10 # time between measurements in sec
-    N_meas = 5 # total no. meas
-    N_reads = 5
+    N_meas = 100 # total no. meas
+    N_reads = 10
     voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
 
     # instantiate an object that interfaces with the IBM4
