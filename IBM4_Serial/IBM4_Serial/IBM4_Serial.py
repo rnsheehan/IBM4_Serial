@@ -818,8 +818,11 @@ def Plot_Save_PWM_Calibration_Data(pwmPin, pwmData, INCLUDE_PWM_FILT = True, lou
     if INCLUDE_PWM_FILT:
         hv_data.append([pwmData.transpose()[0], pwmData.transpose()[1], pwmData.transpose()[2]])
         labels.append('%(v1)s Filt'%{"v1":pwmPin}); marks.append(Plotting.labs_pts[0]); 
-    hv_data.append([pwmData.transpose()[0], pwmData.transpose()[3], pwmData.transpose()[4]])
-    labels.append('%(v1)s Amp'%{"v1":pwmPin}); marks.append(Plotting.labs_pts[1]);
+        hv_data.append([pwmData.transpose()[0], pwmData.transpose()[3], pwmData.transpose()[4]])
+        labels.append('%(v1)s Amp'%{"v1":pwmPin}); marks.append(Plotting.labs_pts[1]);
+    else:
+        hv_data.append([pwmData.transpose()[0], pwmData.transpose()[1], pwmData.transpose()[2]])
+        labels.append('%(v1)s Amp'%{"v1":pwmPin}); marks.append(Plotting.labs_pts[1]); 
 
     # Generate the combined plot with error bars
     args = Plotting.plot_arg_multiple()
@@ -843,7 +846,9 @@ def Linear_Fit_PWM_Calibration_Data(pwmPin, pwmData, INCLUDE_PWM_FILT = True, lo
     # Make a linear fit to the filtered PWM vs DC val data
     if INCLUDE_PWM_FILT:
         interPWM, slopePWM = Common.linear_fit(pwmData.transpose()[0], pwmData.transpose()[1], [1,1])
-    interAmp, slopeAmp = Common.linear_fit(pwmData.transpose()[0], pwmData.transpose()[3], [1,1])
+        interAmp, slopeAmp = Common.linear_fit(pwmData.transpose()[0], pwmData.transpose()[3], [1,1])
+    else:
+        interAmp, slopeAmp = Common.linear_fit(pwmData.transpose()[0], pwmData.transpose()[1], [1,1])
     
     if loud:
         print('Sweep complete %(v1)s'%{"v1":pwmPin})
@@ -880,7 +885,7 @@ def Calibrate_PWM_Filtered_DC_Amp_Conversion(loud = False):
     # instantiate an object to keep track of the sweep space parameters
     no_steps = 50
     v_start = 0.0
-    v_end = 100.0
+    v_end = 55.0
     the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
     
     # instantiate an object that interfaces with the IBM4
@@ -894,7 +899,7 @@ def Calibrate_PWM_Filtered_DC_Amp_Conversion(loud = False):
     sf = R2 / (R1 + R2) # voltage divider scale factor
     fs = 1.0 / sf # inverse of voltage divider scale factor
     voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
-    pwmPin = "D8"
+    pwmPin = "D9"
     pwmSet = the_interval.start # initiliase the PWM value
     print('Calibrating PWM pin:%(v1)s'%{"v1":pwmPin})
     count = 0
@@ -1089,6 +1094,86 @@ def Long_Voltage_Measure():
         plt.cla()
         plt.close()
 
+def PCB_Voltage_Control():
+
+    # Control the voltage output of the PCB 
+    # R. Sheehan 7 - 1 - 2026
+
+    ERR_STATEMENT = "Error: PCB_Voltage_Control"
+
+    try:
+        # instantiate an object that interfaces with the IBM4
+        the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+
+        if the_dev.CommsStatus():
+
+            DELAY = 0.1 # timed delay value in units of seconds
+            Vmin = 0.0
+            Vmax = 6.0
+            pwmPin = "D9"
+            # fit parameters for converting PWM DC to Vout
+            # Vout = m1 DC + c1
+            m1 = 0.108221577
+            c1 = -0.121880690
+            # fit parameters for converting Vout to PWM DC
+            # DC = m2 * Vout + c2
+            m2 = 1.0 / m1
+            c2 = -1.0*( c1 / m1)
+
+            do = True
+            while do:
+                action = int( input( PCBPrompt() ) )
+                if action == -1:
+                    print('\nEnd Program\n')
+                    the_dev.ZeroIBM4()
+                    do = False
+                elif action == 1:
+                    print('\nSet PCB Voltage\n')
+                    axvolt = float( input('Enter a voltage value between 0V and 6V: ') )
+                    axvolt = max( min(axvolt, Vmax), Vmin)
+                    pwmSet = int( m2*axvolt + c2 )
+                    the_dev.WriteAnyPWM(pwmPin, pwmSet)
+                    time.sleep(DELAY) # Apply a fixed delay
+                    continue
+                elif action == 2:
+                    print('\nGround PCB\n')
+                    the_dev.ZeroIBM4()
+                    continue
+                else:
+                    continue
+        else:
+            ERR_STATEMENT = ERR_STATEMENT + '\nCannot proceed, unable to connect to IBM4 device'
+            raise Exception        
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def PCBPrompt():
+    """
+    text processing for the multimeter mode prompt
+    """
+        
+    start = '\nVoltage Output Using PCB:\n';
+    message = '\nInput Value to Indicate Option You Require: ';
+    newline = '\n'
+
+    option1 = 'Set PCB Voltage Output'; # Set voltage at D9
+    option2 = 'Ground PCB'; # Gnd all outputs
+    option3 = 'Close Comms'; # End multimeter mode
+    
+    theOptions = [option1, option2, option3]
+    
+    theValues = ['1', '2', '-1']
+    
+    width = max(len(item) for item in theOptions) + 5
+        
+    prompt = start
+    for i in range(0, len(theOptions), 1):
+        prompt = prompt + theOptions[i].ljust(width) + theValues[i] + newline
+    prompt = prompt + message
+        
+    return prompt
+
 def main():
     pass
 
@@ -1099,15 +1184,12 @@ if __name__ == '__main__':
 
     print(pwd)
 
-    step_data = numpy.array([2.57, 1.04, 0.567, 0.05, 0.06])
-    
-    print(step_data)
-    print(step_data[0:3] - step_data[-1])
-    print(2.0*(step_data[0:3] - step_data[-1]))
-
-    step_data = 2.0*(step_data[0:3] - step_data[-1])
-
-    print(numpy.insert(step_data, 0, 7.7))
+    # step_data = numpy.array([2.57, 1.04, 0.567, 0.05, 0.06])    
+    # print(step_data)
+    # print(step_data[0:3] - step_data[-1])
+    # print(2.0*(step_data[0:3] - step_data[-1]))
+    # step_data = 2.0*(step_data[0:3] - step_data[-1])
+    # print(numpy.insert(step_data, 0, 7.7))
 
     # Testing Average Calculation
     # voltage_data = numpy.loadtxt('PCB_PWM_Test_Data.txt', delimiter = '\t', unpack = False)
@@ -1164,4 +1246,6 @@ if __name__ == '__main__':
     
     #Compute_Average_Cal_Parameters()
 
-    Long_Voltage_Measure()
+    #Long_Voltage_Measure()
+
+    PCB_Voltage_Control()

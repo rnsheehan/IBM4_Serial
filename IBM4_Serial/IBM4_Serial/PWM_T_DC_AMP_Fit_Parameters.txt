@@ -1,0 +1,2 @@
+PWM Pin No., Amp Slope, Amp Intercept
+D9, 0.108221577, -0.121880690
