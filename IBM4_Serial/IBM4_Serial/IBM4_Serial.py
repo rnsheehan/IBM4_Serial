@@ -1111,14 +1111,16 @@ def PCB_Voltage_Control():
             Vmin = 0.0
             Vmax = 6.0
             pwmPin = "D9"
+
             # fit parameters for converting PWM DC to Vout
             # Vout = m1 DC + c1
             m1 = 0.108221577
             c1 = -0.121880690
+
             # fit parameters for converting Vout to PWM DC
-            # DC = m2 * Vout + c2
-            m2 = 1.0 / m1
-            c2 = -1.0*( c1 / m1)
+            # DC = m2 * Vout - c2
+            m2 = (1.0 / m1)
+            c2 = ( c1 / m1)
 
             do = True
             while do:
@@ -1131,7 +1133,7 @@ def PCB_Voltage_Control():
                     print('\nSet PCB Voltage\n')
                     axvolt = float( input('Enter a voltage value between 0V and 6V: ') )
                     axvolt = max( min(axvolt, Vmax), Vmin)
-                    pwmSet = int( m2*axvolt + c2 )
+                    pwmSet = int( ( ( m2 * axvolt ) - c2 ) )
                     the_dev.WriteAnyPWM(pwmPin, pwmSet)
                     time.sleep(DELAY) # Apply a fixed delay
                     continue
@@ -1150,7 +1152,7 @@ def PCB_Voltage_Control():
 
 def PCBPrompt():
     """
-    text processing for the multimeter mode prompt
+    text processing for the PCB Option prompt
     """
         
     start = '\nVoltage Output Using PCB:\n';
