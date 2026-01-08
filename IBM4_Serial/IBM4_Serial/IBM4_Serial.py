@@ -18,7 +18,7 @@ import os
 import sys
 import glob
 import re
-import serial
+import serial # this package is actually called pyserial, install using py -m pip install pyserial
 import pyvisa
 import time
 import numpy

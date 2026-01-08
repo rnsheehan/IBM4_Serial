@@ -68,7 +68,7 @@ import os
 import sys
 import glob
 import re
-import serial
+import serial # this package is actually called pyserial, install using py -m pip install pyserial
 import time
 import numpy
 import Sweep_Interval
