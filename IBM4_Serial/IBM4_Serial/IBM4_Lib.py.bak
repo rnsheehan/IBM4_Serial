@@ -68,10 +68,11 @@ import os
 import sys
 import glob
 import re
-import serial
+import serial # this package is actually called pyserial, install using py -m pip install pyserial
 import time
 import numpy
 import Sweep_Interval
+import subprocess
 
 # define the class for interfacing to an IBM4
 
@@ -104,7 +105,7 @@ class Ser_Iface(object):
             # Dictionaries for the Read, Write, PWM Channels
             self.Read_Chnnls = {"A2":0, "A3":1, "A4":2, "A5":3, "D2":4}
             self.Write_Chnnls = {"A0":0, "A1":1}
-            self.PWM_Chnnls = {"D5":5, "D7":7, "D9":9, "D10":10, "D11":11, "D12":12, "D13":13}
+            self.PWM_Chnnls = {"D9":9, "D10":10, "D11":11, "D12":12, "D13":13}
             
             # Dictionary for the Read Mode
             self.Read_Modes = {"DC":0, "AC":1}
@@ -161,26 +162,29 @@ class Ser_Iface(object):
         
         return "class for interfacing to an IBM4"
     
-    def ResetBuffer(self):
-        
-        """
-        In order to be able to sweep correctly the buffer must be reset between write, read command pairs
-        """
+    # def ResetBuffer(self):
+    #     # DEPRECATED - METHOD DOES NOT PERFORM AS REQUIRED
+    #     """
+    #     In order to be able to sweep correctly the buffer must be reset between write, read command pairs
+    #     """
 
-        self.FUNC_NAME = ".ResetBuffer()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
+    #     # I'm not sure if this method actually does anything
+    #     # R. Sheehan 12 - 12 - 2024
 
-        try:            
-            # confirm that the instrument object has been instantiated
-            if self.instr_obj.isOpen():
-                self.instr_obj.reset_input_buffer()
-                #self.instr_obj.reset_output_buffer() # this appears to have no effect
-            else:
-                self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
-                raise Exception
-        except Exception as e:
-            print(self.ERR_STATEMENT)
-            print(e)
+    #     self.FUNC_NAME = ".ResetBuffer()" # use this in exception handling messages
+    #     self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
+
+    #     try:            
+    #         # confirm that the instrument object has been instantiated
+    #         if self.instr_obj.isOpen():
+    #             self.instr_obj.reset_input_buffer() # this appears to have no effect
+    #             self.instr_obj.reset_output_buffer() # this appears to have no effect
+    #         else:
+    #             self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
+    #             raise Exception
+    #     except Exception as e:
+    #         print(self.ERR_STATEMENT)
+    #         print(e)
 
     def CommsStatus(self):
         """
@@ -215,8 +219,6 @@ class Ser_Iface(object):
                 self.ZeroIBM4()
 
                 self.CommsStatus()
-                
-                self.ResetBuffer() # delete all text from the IB4 Buffer
             else:
                 self.ERR_STATEMENT = self.ERR_STATEMENT + '\nNo IBM4 attached to PC'
                 raise Exception
@@ -236,14 +238,17 @@ class Ser_Iface(object):
             if self.instr_obj.isOpen():
                  # Set all analog outputs to GND
                 self.instr_obj.write(b'a0\r\n')
+                read_result = self.instr_obj.read_until(size=4) # read_result returned as bytes and clear the input buffer  
                 self.instr_obj.write(b'b0\r\n')
+                read_result = self.instr_obj.read_until(size=4) # read_result returned as bytes and clear the input buffer  
                 #self.instr_obj.write(b'PWM9:0\r\n')
                 # Set all PWM outputs to GND
                 # PWM pins 5, 7, 9, 10, 11, 12, 13                
                 for k, v in self.PWM_Chnnls.items():
                     PWM_cmd = 'PWM%(v1)d:0\r\n'%{"v1":v}
                     self.instr_obj.write( str.encode( PWM_cmd ) )
-                #self.ResetBuffer() # reset buffer
+                    read_result = self.instr_obj.read_until(size=PWM_cmd.__sizeof__()) # read_result returned as bytes and clear the input buffer  
+                    read_result = self.instr_obj.read_until(b'\n', size=None) # read_result returned as bytes and clear the input buffer
             else:
                 # Do nothing, no link to IBM4 established
                 pass
@@ -262,11 +267,28 @@ class Ser_Iface(object):
 
         try:
             if self.instr_obj.isOpen():
-                self.ResetBuffer() # reset buffer between write, read cmd pairs
+                #self.ResetBuffer() # reset buffer between write, read cmd pairs, seems to be having no effect
                 self.instr_obj.write(b'*IDN\r\n')
                 response = self.instr_obj.read_until('\n',size=None)
                 Code=response.rsplit(b'\r\n')
-                return Code[1] if len(Code) > 1 else None
+
+                #return Code[1] if len(Code) > 1 else None
+
+                # Need a more generic way to locate the ISBY string
+                # because the ResetBuffer Call does not seem to be having any effect
+                # Must encode the test string as bytes because Python 3.X is really pedantic
+                #print(type('ISBY')) # type str #print(type(Code[i])) # type bytes
+                count = -1
+                for i in range(0,len(Code), 1): 
+                    if b'ISBY' in Code[i]: 
+                        count = i                
+                        break
+                return Code[count] if count>-1 else None
+            
+                # Pythonic method
+                #https://stackoverflow.com/questions/4843158/how-to-check-if-a-string-is-a-substring-of-items-in-a-list-of-strings
+                #matching = [s for s in Code if b'ISBY' in s]
+                #return matching[0] if len(matching)>0 else None
             else:
                 # Do nothing, no link to IBM4 established
                 pass
@@ -388,7 +410,7 @@ class Ser_Iface(object):
                 write_cmd = 'Write%(v1)d:%(v2)0.2f\r\n'%{"v1":self.Write_Chnnls[output_channel], "v2":set_voltage}
                 self.instr_obj.write( str.encode(write_cmd) ) # when using serial str must be encoded as bytes
                 #time.sleep(DELAY) # no need for explicit delay, this is handled by write_timeout
-                #self.ResetBuffer() # reset buffer between write, read cmd pairs
+                self.ResetBuffer() # reset buffer between write, read cmd pairs
             else:
                 if not c1:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
@@ -409,7 +431,7 @@ class Ser_Iface(object):
         The PWM output must be between 0 and 100, and is a floating point value.
     
         instrument_obj is the open visa resource connected to dev_addr
-        percentage must be in the range [0.0, 100]
+        percentage (type: float) must be in the range [0.0, 100]
         """
 
         self.FUNC_NAME = ".WritePWM()" # use this in exception handling messages
@@ -435,6 +457,44 @@ class Ser_Iface(object):
             print(self.ERR_STATEMENT)
             print(e)
     
+    def WriteAnyPWM(self, pinOut, percentage):
+
+        """
+        This method interfaces with the IBM4 to set a pulse wave modulated (PWM) output signal.
+        The output Pin# must be: 0, 1, 7, 9, 10-13.
+        The PWM output must be between 0 and 100, and is a floating point value.
+    
+        instrument_obj is the open visa resource connected to dev_addr
+        percentage (type: float) must be in the range [0.0, 100]
+        input_channel (type: str) is one of the labels for the PWM output channels 'D0', 'D1', 'D7', 'D9', 'D10'-'D13'
+        
+        This method is not intended for use with IBM4 enhancement board
+        """
+
+        self.FUNC_NAME = ".WriteAnyPWM()" # use this in exception handling messages
+        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
+
+        try:
+            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
+            c3 = True if percentage >= 0 and percentage < 101 else False # confirm that PWM percentage is a sensible value
+            c4 = True if pinOut in self.PWM_Chnnls else False # confirm that the pintOut channel label is correct
+        
+            c10 = c1 and c3 and c4 # if all conditions are true then write can proceed
+            if c10:
+                output_channel = self.PWM_Chnnls[pinOut] # when using the IBM4 enhancement board the PWM is fixed to D9
+                write_cmd = 'PWM%(v1)d:%(v2)d\r\n'%{"v1":output_channel, "v2":percentage}
+                self.instr_obj.write( str.encode(write_cmd) ) # when using serial str must be encoded as bytes
+                #self.ResetBuffer() # reset buffer between write, read cmd pairs
+            else:
+                if not c1:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nNo comms established'
+                if not c3:
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\npercentage outside range [0, 100]'
+                raise Exception
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+
     # methods for obtaining data from the IBM4
     def ReadVoltage(self, input_channel, read_type = 'Single Voltage', no_reads = 10):
         
@@ -791,7 +851,7 @@ class Ser_Iface(object):
                 read_result = self.instr_obj.read_until('\n',size=None) # read_result returned as bytes, must be cast to str before being parsed                
                 vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list
                 self.ResetBuffer() # reset buffer between write, read cmd pairs
-                vals_flt = numpy.float_(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
+                vals_flt = numpy.float64(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
                 vals_mean = numpy.mean(vals_flt) # compute the average of all the diff_reads
                 vals_delta = 0.5*( numpy.max(vals_flt) - numpy.min(vals_flt) ) # compute the range of the diff_read
                 res = [vals_mean, vals_delta, vals_flt]
@@ -1010,7 +1070,7 @@ class Ser_Iface(object):
                 vals_str = re.findall(r'[-+]?\d+[\.]?\d*', str(read_result) ) # parse the numeric values of read_result into a list of strings
                 #vals_flt = [float(x) for x in vals_str] # convert the list of strings to floats, save as a list
                 # only interested in the last no_reads values so read backwards into the vals_str list using list-slice operator
-                vals_flt = numpy.float_(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
+                vals_flt = numpy.float64(vals_str[-no_reads:]) # convert the list of strings to floats using numpy, save as numpy array (better)
                 if loud: 
                     print(read_result)
                     print(vals_flt) # print the parsed values
@@ -1184,7 +1244,7 @@ class Ser_Iface(object):
                         self.VoltOutputPrompt('A1')
                         continue
                     elif action == 4:
-                        self.PWMPrompt()
+                        self.AnyPWMPrompt()
                         continue
                     elif action == 5:
                         self.GroundIBM4Prompt()
@@ -1286,6 +1346,16 @@ class Ser_Iface(object):
         print('\nSet PWM Output')
         pwmval = int( input( 'Enter PWM percentage: ' ) )
         self.WritePWM(pwmval)
+        
+    def AnyPWMPrompt(self):
+        """
+        Method for getting the IBM4 to output PWM signal from any PWM
+        """
+
+        print('\nSet PWM Output')
+        pwmval = int( input( 'Enter PWM percentage: ' ) )
+        pwmout = input( 'Enter PWM Channel: ' )
+        self.WriteAnyPWM(pwmout, pwmval)
     
     def DiffReadPrompt(self):
         """
@@ -1300,7 +1370,7 @@ class Ser_Iface(object):
         print('Differential Read Value = %(v1)0.3f +/- %(v2)0.3f (V)'%{"v1":diff_res[0], "v2":diff_res[1]})
         
     # methods for initiating voltage sweeps
-    def SingleChannelSweep(self, swp_channel, v_strt, v_end, no_steps, v_fixed = 0.0, no_averages = 10):
+    def SingleChannelSweepA(self, swp_channel, v_strt, v_end, no_steps, v_fixed = 0.0, no_averages = 10):
     
         """
         Enable the microcontroller to perform a linear sweep of measurements using a single channel
@@ -1332,9 +1402,9 @@ class Ser_Iface(object):
             c1 = self.instr_obj.isOpen() # confirm that the intstrument object has been instantiated
             c2 = True if swp_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
             c3 = True if v_strt >= self.VMIN and v_strt < v_end else False # confirm that the voltage sweep bounds are in range
-            c4 = True if v_end > v_strt and v_end < self.VMAX else False # confirm that the voltage sweep bounds are in range
+            c4 = True if v_end > v_strt and v_end <= self.VMAX else False # confirm that the voltage sweep bounds are in range
             c5 = True if (v_end - v_strt) > self.DELTA_VMIN else False # confirm that the voltage sweep bounds are in range
-            c8 = True if v_fixed >= self.VMIN and v_fixed < self.VMAX else False # confirm that the fixed voltage is in range
+            c8 = True if v_fixed >= self.VMIN and v_fixed <= self.VMAX else False # confirm that the fixed voltage is in range
             c6 = True if no_steps > 2 else False # confirm that the no. of steps is appropriate
             c7 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
             c10 = c1 and c2 and c3 and c4 and c5 and c6 and c7 and c8
@@ -1349,7 +1419,9 @@ class Ser_Iface(object):
                 delta_v = max( (v_end - v_strt) / float(no_steps - 1), self.DELTA_VMIN) # Determine the sweep voltage increment, this is bounded below by delta_v_min
                 v_set = v_strt # initialise the set-voltage
                 # perform the sweep
-                print('Sweeping voltage on Analog Output: ',swp_channel)
+                print('\nLinear Sweep in Progress')
+                print('Sweeping voltage on Analog Output:',swp_channel)
+                print('Fixed voltage of',v_fixed,'(V) on Analog Output:',fixed_channel,'\n')
                 count = 0
                 while v_set < v_end:
                     step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
@@ -1386,7 +1458,7 @@ class Ser_Iface(object):
             print(self.ERR_STATEMENT)
             print(e)    
             
-    def SingleChannelSweep(self, swp_channel, voltage_interval:Sweep_Interval.SweepSpace, v_fixed = 0.0, no_averages = 10):
+    def SingleChannelSweepB(self, swp_channel, voltage_interval:Sweep_Interval.SweepSpace, v_fixed = 0.0, no_averages = 10):
     
         """
         Enable the microcontroller to perform a linear sweep of measurements using a single channel
@@ -1438,7 +1510,9 @@ class Ser_Iface(object):
                 voltage_data = numpy.array([]) # instantiate an empty numpy array to store the sweep data
                 v_set = voltage_interval.start # initialise the set-voltage
                 # perform the sweep
-                print('Sweeping voltage on Analog Output: ',swp_channel)
+                print('\nLinear Sweep in Progress')
+                print('Sweeping voltage on Analog Output:',swp_channel)
+                print('Fixed voltage of',v_fixed,'(V) on Analog Output:',fixed_channel,'\n')
                 count = 0
                 while v_set < voltage_interval.stop:
                     step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
