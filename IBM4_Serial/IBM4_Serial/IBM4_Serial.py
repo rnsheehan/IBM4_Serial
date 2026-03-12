@@ -701,12 +701,12 @@ def Class_Testing():
         print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
         print("Measured Voltages: ", val)
         
-    DMM_MODE = False
+    DMM_MODE = True
     
     if DMM_MODE:
         the_dev.MultimeterMode()
         
-    LINEAR_SWEEP = True
+    LINEAR_SWEEP = False
 
     if LINEAR_SWEEP:
         no_steps = 51
