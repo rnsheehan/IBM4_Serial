@@ -701,7 +701,7 @@ def Class_Testing():
         print("Sample Rate: %(v1)0.2f Hz"%{"v1":SR})
         print("Measured Voltages: ", val)
         
-    DMM_MODE = True
+    DMM_MODE = False
     
     if DMM_MODE:
         the_dev.MultimeterMode()
@@ -717,6 +717,23 @@ def Class_Testing():
 
         the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)        
         the_dev.SingleChannelSweepB('A1', the_interval) # use channel A1 to sweep over the voltage interval
+
+    SIMP_READ = True
+    if SIMP_READ:
+        the_dev.WriteAnyPWM('D7',0.0)
+        the_dev.WriteAnyPWM('D11',0.0)
+        #the_dev.ReadSimple()
+        print(the_dev.ReadAverageVoltageAllChnnl())
+
+        the_dev.WriteAnyPWM('D7',50)
+        the_dev.WriteAnyPWM('D11',25)
+        #the_dev.ReadSimple()
+        print(the_dev.ReadAverageVoltageAllChnnl())
+        
+        the_dev.WriteAnyPWM('D7',0.0)
+        the_dev.WriteAnyPWM('D11',0.0)
+        #the_dev.ReadSimple()
+        print(the_dev.ReadAverageVoltageAllChnnl())
 
     del the_dev # destructor for the IBM4 object, closes comms
     
